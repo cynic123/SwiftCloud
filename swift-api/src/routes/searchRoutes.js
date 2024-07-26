@@ -61,7 +61,7 @@ router.post('/autocomplete', (req, res) => {
             console.error('Error:', err);
             return res.status(500).json({ error: 'Internal Server Error' });
         }
-        res.json(response);
+        res.json({ suggestions: response.suggestions });
     });
 });
 

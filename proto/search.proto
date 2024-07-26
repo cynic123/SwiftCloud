@@ -51,7 +51,12 @@ message SearchResponse {
 }
 
 message AutocompleteResponse {
-  repeated string suggestions = 1;
+  repeated Suggestion suggestions = 1;
+}
+
+message Suggestion {
+  string value = 1;
+  string type = 2;
 }
 
 message Song {

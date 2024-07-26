@@ -155,39 +155,38 @@ const searchService = {
   Autocomplete: async (call, callback) => {
     const { query, limit = 5 } = call.request;
     try {
+      const regexPattern = new RegExp(`^${query}`, 'i');
       const suggestions = await Song.aggregate([
         {
           $match: {
             $or: [
-              { title: { $regex: `^${query}`, $options: 'i' } },
-              { artist: { $regex: `^${query}`, $options: 'i' } },
-              { album: { $regex: `^${query}`, $options: 'i' } },
-              { writers: { $regex: `^${query}`, $options: 'i' } }
+              { title: regexPattern },
+              { artist: regexPattern },
+              { album: regexPattern },
+              { writers: regexPattern }
             ]
           }
         },
         {
-          $group: {
-            _id: null,
-            titles: { $addToSet: "$title" },
-            artists: { $addToSet: "$artist" },
-            albums: { $addToSet: "$album" },
-            writers: { $addToSet: { $arrayElemAt: ["$writers", 0] } }
+          $project: {
+            suggestions: [
+              { $cond: [{ $regexMatch: { input: "$title", regex: regexPattern } }, { value: "$title", type: "title" }, null] },
+              { $cond: [{ $regexMatch: { input: "$artist", regex: regexPattern } }, { value: "$artist", type: "artist" }, null] },
+              { $cond: [{ $regexMatch: { input: "$album", regex: regexPattern } }, { value: "$album", type: "album" }, null] },
+              { $cond: [{ $regexMatch: { input: { $arrayElemAt: ["$writers", 0] }, regex: regexPattern } }, { value: { $arrayElemAt: ["$writers", 0] }, type: "writer" }, null] }
+            ]
           }
         },
-        {
-          $project: {
-            suggestions: {
-              $slice: [
-                { $setUnion: ["$titles", "$artists", "$albums", "$writers"] },
-                limit
-              ]
-            }
-          }
-        }
+        { $unwind: "$suggestions" },
+        { $match: { "suggestions": { $ne: null } } },
+        { $replaceRoot: { newRoot: "$suggestions" } },
+        { $group: { _id: "$value", doc: { $first: "$$ROOT" } } },
+        { $replaceRoot: { newRoot: "$doc" } },
+        { $sort: { value: 1 } },
+        { $limit: limit }
       ]);
-
-      callback(null, { suggestions: suggestions[0]?.suggestions || [] });
+  
+      callback(null, { suggestions });
     } catch (err) {
       console.error('Autocomplete error:', err);
       callback({
