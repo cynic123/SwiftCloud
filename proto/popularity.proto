@@ -11,6 +11,13 @@ service PopularityService {
   rpc GetPopularityOverTime (PopularityOverTimeRequest) returns (PopularityOverTimeResponse) {}
   rpc GetArtistPopularity (ArtistRequest) returns (ArtistPopularity) {}
   rpc GetPopularityComparison (ComparisonRequest) returns (PopularityComparison) {}
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
 }
 
 message PopularityRequest {

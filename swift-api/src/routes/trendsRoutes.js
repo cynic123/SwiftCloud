@@ -19,6 +19,17 @@ const trendProto = grpc.loadPackageDefinition(packageDefinition).trend;
 
 const client = new trendProto.TrendService('localhost:3004', grpc.credentials.createInsecure());
 
+// Health Check
+router.get('/health', (req, res) => {
+    client.HealthCheck({}, (err, response) => {
+        if (err) {
+            console.error('Error:', err);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+        res.json(response);
+    });
+});
+
 // Get overall trends
 router.get('/', (req, res) => {
     client.GetOverallTrends({}, (err, response) => {

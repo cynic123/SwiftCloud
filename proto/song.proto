@@ -9,6 +9,13 @@ service SongService {
   rpc GetSongsByWriter (WriterRequest) returns (SongList) {}
   rpc GetSongsByAlbum (AlbumRequest) returns (SongList) {}
   rpc GetSongsByMonth (MonthRequest) returns (SongList) {}
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
 }
 
 message Empty {}

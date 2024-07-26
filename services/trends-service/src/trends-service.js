@@ -2,6 +2,19 @@ const { Song, Album, Artist } = require('./db');
 const moment = require('moment');
 
 const trendService = {
+  HealthCheck: async (call, callback) => {
+    try {
+      callback(null, { status: 'Welcome to Trends Service!' });
+    } catch (err) {
+      console.error('Health check error:', err);
+      callback({
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
+      });
+    }
+  },
+  
   GetOverallTrends: async (call, callback) => {
     try {
       const totalPlays = await Song.aggregate([

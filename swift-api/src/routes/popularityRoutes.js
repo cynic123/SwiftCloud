@@ -19,6 +19,17 @@ const popularityProto = grpc.loadPackageDefinition(packageDefinition).popularity
 
 const client = new popularityProto.PopularityService('localhost:3003', grpc.credentials.createInsecure());
 
+// Health Check
+router.get('/health', (req, res) => {
+    client.HealthCheck({}, (err, response) => {
+        if (err) {
+            console.error('Error:', err);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+        res.json(response);
+    });
+});
+
 // Get most popular songs
 router.get('/songs', (req, res) => {
     const { period = 'all_time', limit = 10, offset = 0 } = req.query;

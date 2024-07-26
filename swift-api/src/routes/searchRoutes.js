@@ -17,9 +17,21 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const searchProto = grpc.loadPackageDefinition(packageDefinition).search;
 
-const client = new searchProto.SearchService('localhost:3002', grpc.credentials.createInsecure());
+const SEARCH_SERVICE_PORT = process.env.SEARCH_SERVICE_PORT || 3002;
+const client = new searchProto.SearchService(`localhost:${SEARCH_SERVICE_PORT}`, grpc.credentials.createInsecure());
 
-// General search
+// Health Check
+router.get('/health', (req, res) => {
+    client.HealthCheck({}, (err, response) => {
+        if (err) {
+            console.error('Error:', err);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+        res.json(response);
+    });
+});
+
+// Basic Seach (without query)
 router.post('/', (req, res) => {
     const { query, limit = 10, offset = 0 } = req.body;
     client.Search({ query, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
@@ -31,46 +43,9 @@ router.post('/', (req, res) => {
     });
 });
 
-// Search songs
-router.get('/songs', (req, res) => {
-    const { query, limit = 10, offset = 0 } = req.query;
-    client.SearchSongs({ query, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
-});
-
-// Search albums
-router.get('/albums', (req, res) => {
-    const { query, limit = 10, offset = 0 } = req.query;
-    client.SearchAlbums({ query, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
-});
-
-// Search artists
-router.get('/artists', (req, res) => {
-    const { query, limit = 10, offset = 0 } = req.query;
-    client.SearchArtists({ query, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
-});
-
-// Advanced search
+// Advanced Search (with detailed query, refer README.md for query specification details)
 router.post('/advanced', (req, res) => {
-    const { query, filters, sort, limit = 10, offset = 0 } = req.body;
-    client.AdvancedSearch({ query, filters, sort, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
+    client.AdvancedSearch(req.body, (err, response) => {
         if (err) {
             console.error('Error:', err);
             return res.status(500).json({ error: 'Internal Server Error' });
@@ -79,9 +54,8 @@ router.post('/advanced', (req, res) => {
     });
 });
 
-// Autocomplete
-router.get('/autocomplete', (req, res) => {
-    const { query, limit = 5 } = req.query;
+router.post('/autocomplete', (req, res) => {
+    const { query, limit = 5 } = req.body;
     client.Autocomplete({ query, limit: parseInt(limit) }, (err, response) => {
         if (err) {
             console.error('Error:', err);

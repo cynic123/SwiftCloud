@@ -20,6 +20,17 @@ const songProto = grpc.loadPackageDefinition(packageDefinition).song;
 const SONG_SERVICE_PORT = process.env.SONG_SERVICE_PORT || 3001;
 const client = new songProto.SongService(`localhost:${SONG_SERVICE_PORT}`, grpc.credentials.createInsecure());
 
+// Health Check
+router.get('/health', (req, res) => {
+    client.HealthCheck({}, (err, response) => {
+        if (err) {
+            console.error('Error:', err);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+        res.json(response);
+    });
+});
+
 router.get('/', (req, res) => {
     client.GetAllSongs({}, (err, response) => {
         if (err) {

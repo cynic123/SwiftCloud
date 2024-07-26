@@ -2,6 +2,19 @@ const { Song, Album, Artist } = require('./db');
 const moment = require('moment');
 
 const popularityService = {
+  HealthCheck: async (call, callback) => {
+    try {
+      callback(null, { status: 'Welcome to Popularity Service!' });
+    } catch (err) {
+      console.error('Health check error:', err);
+      callback({
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
+      });
+    }
+  },
+  
   GetMostPopularSongs: async (call, callback) => {
     const { period, limit, offset } = call.request;
     try {

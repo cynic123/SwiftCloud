@@ -1,16 +1,32 @@
-const { Song, Album, Artist } = require('./db');
+const { Song } = require('./db');
 
 const searchService = {
+  HealthCheck: async (call, callback) => {
+    try {
+      callback(null, { status: 'Welcome to Search Service!' });
+    } catch (err) {
+      console.error('Health check error:', err);
+      callback({
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
+      });
+    }
+  },
+
   Search: async (call, callback) => {
     const { query, limit = 10, offset = 0 } = call.request;
     try {
-      const searchQuery = { $text: { $search: query } };
+      const searchQuery = {
+        $or: [
+          { title: { $regex: query, $options: 'i' } },
+          { artist: { $regex: query, $options: 'i' } },
+          { album: { $regex: query, $options: 'i' } },
+          { writers: { $regex: query, $options: 'i' } }
+        ]
+      };
 
-      const songs = await Song.find(
-        searchQuery,
-        { score: { $meta: "textScore" } }
-      )
-        .sort({ score: { $meta: "textScore" } })
+      const songs = await Song.find(searchQuery)
         .skip(offset)
         .limit(limit)
         .lean();
@@ -19,12 +35,12 @@ const searchService = {
 
       const formattedResults = songs.map(song => ({
         id: song._id.toString(),
-        type: "song",
         title: song.title,
         artist: song.artist,
+        writers: song.writers,
         album: song.album,
         year: song.year,
-        relevance_score: song.score
+        plays: song.plays
       }));
 
       callback(null, { results: formattedResults, total_results: totalResults });
@@ -38,107 +54,96 @@ const searchService = {
     }
   },
 
-  SearchSongs: async (call, callback) => {
-    const { query, limit, offset } = call.request;
-    try {
-      const songs = await Song.find(
-        { $text: { $search: query } },
-        { score: { $meta: "textScore" } }
-      ).sort({ score: { $meta: "textScore" } }).skip(offset).limit(limit);
-
-      const total_results = await Song.countDocuments({ $text: { $search: query } });
-
-      callback(null, { songs, total_results });
-    } catch (error) {
-      callback(error);
-    }
-  },
-
-  SearchAlbums: async (call, callback) => {
-    const { query, limit, offset } = call.request;
-    try {
-      const albums = await Album.find(
-        { $text: { $search: query } },
-        { score: { $meta: "textScore" } }
-      ).sort({ score: { $meta: "textScore" } }).skip(offset).limit(limit);
-
-      const total_results = await Album.countDocuments({ $text: { $search: query } });
-
-      callback(null, { albums, total_results });
-    } catch (error) {
-      callback(error);
-    }
-  },
-
-  SearchArtists: async (call, callback) => {
-    const { query, limit, offset } = call.request;
-    try {
-      const artists = await Artist.find(
-        { $text: { $search: query } },
-        { score: { $meta: "textScore" } }
-      ).sort({ score: { $meta: "textScore" } }).skip(offset).limit(limit);
-
-      const total_results = await Artist.countDocuments({ $text: { $search: query } });
-
-      callback(null, { artists, total_results });
-    } catch (error) {
-      callback(error);
-    }
-  },
-
   AdvancedSearch: async (call, callback) => {
     const { query, filters, sort, limit = 10, offset = 0 } = call.request;
     try {
-      let searchQuery = query ? { $text: { $search: query } } : {};
+      console.log('Received request:', JSON.stringify(call.request, null, 2));
+  
+      let searchQuery = {};
+      let scoreQuery = [];
+      
+      if (query && query.trim() !== '') {
+        searchQuery.$or = [
+          { title: { $regex: query, $options: 'i' } },
+          { artist: { $regex: query, $options: 'i' } },
+          { album: { $regex: query, $options: 'i' } },
+          { writers: { $elemMatch: { $regex: query, $options: 'i' } } }
+        ];
+        scoreQuery = [
+          { $cond: [{ $regexMatch: { input: '$title', regex: query, options: 'i' } }, 1, 0] },
+          { $cond: [{ $regexMatch: { input: '$artist', regex: query, options: 'i' } }, 1, 0] },
+          { $cond: [{ $regexMatch: { input: '$album', regex: query, options: 'i' } }, 1, 0] },
+          { $cond: [{ $gt: [{ $size: { $filter: { input: '$writers', cond: { $regexMatch: { input: '$$this', regex: query, options: 'i' } } } } }, 0] }, 1, 0] }
+        ];
+      }
       
       // Apply filters
-      filters.forEach(filter => {
-        switch (filter.operator) {
-          case 'eq':
-            searchQuery[filter.field] = filter.value;
-            break;
-          case 'gte':
-            searchQuery[filter.field] = { $gte: filter.value };
-            break;
-          case 'lte':
-            searchQuery[filter.field] = { $lte: filter.value };
-            break;
-          // Add more operators as needed
-        }
-      });
-
+      if (filters && filters.length > 0) {
+        filters.forEach(filter => {
+          switch (filter.operator) {
+            case 'eq':
+              searchQuery[filter.field] = filter.value;
+              break;
+            case 'gte':
+              searchQuery[filter.field] = { $gte: parseInt(filter.value) };
+              break;
+            case 'lte':
+              searchQuery[filter.field] = { $lte: parseInt(filter.value) };
+              break;
+            case 'contains':
+              if (filter.field === 'writers') {
+                searchQuery[filter.field] = { $elemMatch: { $regex: filter.value, $options: 'i' } };
+              } else {
+                searchQuery[filter.field] = { $regex: filter.value, $options: 'i' };
+              }
+              break;
+          }
+        });
+      }
+  
+      console.log('Constructed searchQuery:', JSON.stringify(searchQuery, null, 2));
+  
       let sortOption = {};
       if (sort && sort.field) {
         sortOption[sort.field] = sort.order === 'desc' ? -1 : 1;
       }
-      if (query) {
-        sortOption.score = { $meta: "textScore" };
-      }
-
-      const results = await Song.find(
-        searchQuery,
-        { score: { $meta: "textScore" } }
-      )
-        .sort(sortOption)
-        .skip(offset)
-        .limit(limit)
-        .lean();
-
+  
+      console.log('Sort option:', JSON.stringify(sortOption, null, 2));
+  
+      const aggregationPipeline = [
+        { $match: searchQuery },
+        { $addFields: { 
+          relevance_score: query && query.trim() !== '' 
+            ? { $divide: [{ $sum: scoreQuery }, scoreQuery.length] }
+            : 1
+        }},
+        { $sort: sortOption.year ? sortOption : { relevance_score: -1 } },
+        { $skip: offset },
+        { $limit: limit }
+      ];
+  
+      const songs = await Song.aggregate(aggregationPipeline);
+  
+      console.log(`Found ${songs.length} songs`);
+  
       const totalResults = await Song.countDocuments(searchQuery);
-
-      const formattedResults = results.map(result => ({
-        id: result._id.toString(),
-        type: "song",
-        title: result.title,
-        artist: result.artist,
-        album: result.album,
-        year: result.year,
-        relevance_score: result.score || 0
+  
+      console.log(`Total results: ${totalResults}`);
+  
+      const formattedResults = songs.map(song => ({
+        id: song._id.toString(),
+        title: song.title,
+        artist: song.artist,
+        writers: song.writers,
+        album: song.album,
+        year: song.year,
+        plays: song.plays,
+        relevance_score: song.relevance_score
       }));
-
+  
       callback(null, { results: formattedResults, total_results: totalResults });
     } catch (err) {
-      console.error('Search error:', err);
+      console.error('Advanced search error:', err);
       callback({
         code: 500,
         message: 'Internal Server Error',
@@ -148,32 +153,48 @@ const searchService = {
   },
 
   Autocomplete: async (call, callback) => {
-    const { query, limit } = call.request;
+    const { query, limit = 5 } = call.request;
     try {
-      const songSuggestions = await Song.find(
-        { title: { $regex: `^${query}`, $options: 'i' } },
-        'title'
-      ).limit(limit);
+      const suggestions = await Song.aggregate([
+        {
+          $match: {
+            $or: [
+              { title: { $regex: `^${query}`, $options: 'i' } },
+              { artist: { $regex: `^${query}`, $options: 'i' } },
+              { album: { $regex: `^${query}`, $options: 'i' } },
+              { writers: { $regex: `^${query}`, $options: 'i' } }
+            ]
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            titles: { $addToSet: "$title" },
+            artists: { $addToSet: "$artist" },
+            albums: { $addToSet: "$album" },
+            writers: { $addToSet: { $arrayElemAt: ["$writers", 0] } }
+          }
+        },
+        {
+          $project: {
+            suggestions: {
+              $slice: [
+                { $setUnion: ["$titles", "$artists", "$albums", "$writers"] },
+                limit
+              ]
+            }
+          }
+        }
+      ]);
 
-      const albumSuggestions = await Album.find(
-        { title: { $regex: `^${query}`, $options: 'i' } },
-        'title'
-      ).limit(limit);
-
-      const artistSuggestions = await Artist.find(
-        { name: { $regex: `^${query}`, $options: 'i' } },
-        'name'
-      ).limit(limit);
-
-      const suggestions = [
-        ...songSuggestions.map(song => song.title),
-        ...albumSuggestions.map(album => album.title),
-        ...artistSuggestions.map(artist => artist.name)
-      ].slice(0, limit);
-
-      callback(null, { suggestions });
-    } catch (error) {
-      callback(error);
+      callback(null, { suggestions: suggestions[0]?.suggestions || [] });
+    } catch (err) {
+      console.error('Autocomplete error:', err);
+      callback({
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
+      });
     }
   }
 };

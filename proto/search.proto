@@ -4,11 +4,15 @@ package search;
 
 service SearchService {
   rpc Search (SearchRequest) returns (SearchResponse) {}
-  rpc SearchSongs (SearchRequest) returns (SongSearchResponse) {}
-  rpc SearchAlbums (SearchRequest) returns (AlbumSearchResponse) {}
-  rpc SearchArtists (SearchRequest) returns (ArtistSearchResponse) {}
   rpc AdvancedSearch (AdvancedSearchRequest) returns (SearchResponse) {}
   rpc Autocomplete (AutocompleteRequest) returns (AutocompleteResponse) {}
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
 }
 
 message SearchRequest {
@@ -42,22 +46,7 @@ message AutocompleteRequest {
 }
 
 message SearchResponse {
-  repeated SearchResult results = 1;
-  int32 total_results = 2;
-}
-
-message SongSearchResponse {
-  repeated Song songs = 1;
-  int32 total_results = 2;
-}
-
-message AlbumSearchResponse {
-  repeated Album albums = 1;
-  int32 total_results = 2;
-}
-
-message ArtistSearchResponse {
-  repeated Artist artists = 1;
+  repeated Song results = 1;
   int32 total_results = 2;
 }
 
@@ -65,37 +54,18 @@ message AutocompleteResponse {
   repeated string suggestions = 1;
 }
 
-message SearchResult {
-  string id = 1;
-  string type = 2;
-  string title = 3;
-  string artist = 4;
-  float relevance_score = 5;
-}
-
 message Song {
   string id = 1;
   string title = 2;
   string artist = 3;
-  string album = 4;
-  int32 year = 5;
-  int32 duration = 6;
-  string genre = 7;
+  repeated string writers = 4;
+  string album = 5;
+  int32 year = 6;
+  repeated Play plays = 7;
+  float relevance_score = 8;
 }
 
-message Album {
-  string id = 1;
-  string title = 2;
-  string artist = 3;
-  int32 year = 4;
-  int32 track_count = 5;
-  string genre = 6;
-}
-
-message Artist {
-  string id = 1;
-  string name = 2;
-  string genre = 3;
-  int32 song_count = 4;
-  int32 album_count = 5;
+message Play {
+  string month = 1;
+  int32 count = 2;
 }

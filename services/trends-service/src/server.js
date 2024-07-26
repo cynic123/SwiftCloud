@@ -1,7 +1,7 @@
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
-const trendService = require('./trend-service');
+const trendsService = require('./trends-service');
 const { connectDB } = require('./db');
 
 const PROTO_PATH = path.resolve(__dirname, '../../../proto/trend.proto');
@@ -18,7 +18,7 @@ const trendProto = grpc.loadPackageDefinition(packageDefinition).trend;
 
 const server = new grpc.Server();
 
-server.addService(trendProto.TrendService.service, trendService);
+server.addService(trendProto.TrendService.service, trendsService);
 
 connectDB().then(() => {
   server.bindAsync('0.0.0.0:3004', grpc.ServerCredentials.createInsecure(), (err, port) => {

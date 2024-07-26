@@ -11,6 +11,13 @@ service TrendService {
   rpc GetSeasonalTrends (SeasonalRequest) returns (SeasonalTrends) {}
   rpc GetArtistTrends (ArtistRequest) returns (ArtistTrends) {}
   rpc GetAlbumTrends (AlbumRequest) returns (AlbumTrends) {}
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
 }
 
 message Empty {}

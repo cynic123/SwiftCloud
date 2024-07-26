@@ -1,6 +1,19 @@
 const { Song } = require('./db');
 
 const songService = {
+  HealthCheck: async (call, callback) => {
+    try {
+      callback(null, { status: 'Welcome to Songs Service!' });
+    } catch (err) {
+      console.error('Health check error:', err);
+      callback({
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
+      });
+    }
+  },
+  
   GetAllSongs: async (call, callback) => {
     try {
       const songs = await Song.find();
