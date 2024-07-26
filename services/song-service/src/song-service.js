@@ -45,13 +45,20 @@ const songService = {
   GetSongsByWriter: async (call, callback) => {
     const { writer } = call.request;
     try {
-      const songs = await Song.find({ writers: { $elemMatch: { $regex: new RegExp(writer, 'i') } } });
-      callback(null, { songs });
+      const songs = await Song.find({ writers: { $regex: new RegExp(writer, 'i') } });
+      callback(null, { songs: songs.map(song => ({
+        id: song._id.toString(),
+        title: song.title,
+        artist: song.artist,
+        writers: song.writers,
+        album: song.album,
+        year: song.year,
+        plays: song.plays
+      }))});
     } catch (err) {
       callback({
-        code: 500,
-        message: 'Internal Server Error',
-        status: 'INTERNAL'
+        code: grpc.status.INTERNAL,
+        details: "Error retrieving songs"
       });
     }
   },

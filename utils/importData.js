@@ -41,7 +41,7 @@ async function importData() {
       const song = {
         title: row.Song,
         artist: row.Artist,
-        writer: row.Writer,
+        writers: row.Writer.split('\n').map(writer => writer.trim()), // Split and trim writers
         album: row.Album,
         year: parseInt(row.Year),
         plays: [

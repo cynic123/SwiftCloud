@@ -37,9 +37,9 @@ message Song {
   string id = 1;
   string title = 2;
   string artist = 3;
-  string album = 4;
-  int32 year = 5;
-  repeated string writers = 6;
+  repeated string writers = 4;
+  string album = 5;
+  int32 year = 6;
   repeated Play plays = 7;
 }
 
