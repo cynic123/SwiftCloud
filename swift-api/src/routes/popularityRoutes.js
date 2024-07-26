@@ -17,7 +17,7 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const popularityProto = grpc.loadPackageDefinition(packageDefinition).popularity;
 
-const client = new popularityProto.PopularityService('localhost:50052', grpc.credentials.createInsecure());
+const client = new popularityProto.PopularityService('localhost:3003', grpc.credentials.createInsecure());
 
 // Get most popular songs
 router.get('/songs', (req, res) => {

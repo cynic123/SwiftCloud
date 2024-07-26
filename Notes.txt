@@ -1,0 +1,60 @@
+Basic Search
+------------
+Request:
+GET http://localhost:3000/api/search?q=Love Story&limit=10&offset=0
+
+Response:
+
+
+
+
+
+
+AdvancedSearch
+--------------
+Request:
+POST http://localhost:3000/api/search/advanced
+{
+  "query": "Love Story",
+  "filters": [
+    { "field": "year", "operator": "gte", "value": 2008 },
+    { "field": "album", "operator": "eq", "value": "Fearless" }
+  ],
+  "sort": { "field": "year", "order": "desc" },
+  "limit": 20,
+  "offset": 0
+}
+
+Response:
+{
+    "results": [
+        {
+            "id": "66a392230d30653f90571d20",
+            "type": "song",
+            "title": "Love Story",
+            "artist": "Taylor Swift",
+            "relevance_score": 1.5
+        },
+        {
+            "id": "66a392230d30653f90571d61",
+            "type": "song",
+            "title": "The Way I Loved You",
+            "artist": "Taylor Swift",
+            "relevance_score": 0.75
+        }
+    ],
+    "total_results": 2
+}
+
+The relevance score is a numerical value that indicates how closely a document (in our case, a song) matches the search query. It's typically used to rank search results, with higher scores indicating better matches.
+In MongoDB, when using text search, the relevance score is calculated based on factors like:
+1. How many times the search terms appear in the document.
+2. The importance of the fields where the terms appear.
+3. The rarity of the search terms across all documents.
+
+Factors Affecting the Score:
+1. Field weights: If you've set up your text index to give more weight to certain fields (e.g., title more important than lyrics), this will affect the scores.
+2. Term frequency: How often the search terms appear in each document.
+3. Document length: Longer documents might have lower scores for the same term frequency.
+4. Exact matches vs partial matches: Exact phrase matches typically score higher.
+

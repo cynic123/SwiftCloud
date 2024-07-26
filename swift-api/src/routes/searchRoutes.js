@@ -17,11 +17,11 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const searchProto = grpc.loadPackageDefinition(packageDefinition).search;
 
-const client = new searchProto.SearchService('localhost:50054', grpc.credentials.createInsecure());
+const client = new searchProto.SearchService('localhost:3002', grpc.credentials.createInsecure());
 
 // General search
-router.get('/', (req, res) => {
-    const { query, limit = 10, offset = 0 } = req.query;
+router.post('/', (req, res) => {
+    const { query, limit = 10, offset = 0 } = req.body;
     client.Search({ query, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
         if (err) {
             console.error('Error:', err);

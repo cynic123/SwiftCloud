@@ -1,7 +1,7 @@
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
-const songService = require('./songService');
+const songService = require('./song-service');
 const { connectDB } = require('./db');
 
 const PROTO_PATH = path.resolve(__dirname, '../../../proto/song.proto');
@@ -21,7 +21,7 @@ const server = new grpc.Server();
 server.addService(songProto.SongService.service, songService);
 
 connectDB().then(() => {
-  server.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), (err, port) => {
+  server.bindAsync('0.0.0.0:3001', grpc.ServerCredentials.createInsecure(), (err, port) => {
     if (err) {
       console.error(err);
       return;

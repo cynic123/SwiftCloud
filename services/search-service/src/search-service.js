@@ -2,53 +2,39 @@ const { Song, Album, Artist } = require('./db');
 
 const searchService = {
   Search: async (call, callback) => {
-    const { query, limit, offset } = call.request;
+    const { query, limit = 10, offset = 0 } = call.request;
     try {
-      const songResults = await Song.find(
-        { $text: { $search: query } },
+      const searchQuery = { $text: { $search: query } };
+
+      const songs = await Song.find(
+        searchQuery,
         { score: { $meta: "textScore" } }
-      ).sort({ score: { $meta: "textScore" } }).skip(offset).limit(limit);
+      )
+        .sort({ score: { $meta: "textScore" } })
+        .skip(offset)
+        .limit(limit)
+        .lean();
 
-      const albumResults = await Album.find(
-        { $text: { $search: query } },
-        { score: { $meta: "textScore" } }
-      ).sort({ score: { $meta: "textScore" } }).skip(offset).limit(limit);
+      const totalResults = await Song.countDocuments(searchQuery);
 
-      const artistResults = await Artist.find(
-        { $text: { $search: query } },
-        { score: { $meta: "textScore" } }
-      ).sort({ score: { $meta: "textScore" } }).skip(offset).limit(limit);
+      const formattedResults = songs.map(song => ({
+        id: song._id.toString(),
+        type: "song",
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        year: song.year,
+        relevance_score: song.score
+      }));
 
-      const results = [
-        ...songResults.map(song => ({
-          id: song._id,
-          type: 'song',
-          title: song.title,
-          artist: song.artist,
-          relevance_score: song.score
-        })),
-        ...albumResults.map(album => ({
-          id: album._id,
-          type: 'album',
-          title: album.title,
-          artist: album.artist,
-          relevance_score: album.score
-        })),
-        ...artistResults.map(artist => ({
-          id: artist._id,
-          type: 'artist',
-          title: artist.name,
-          relevance_score: artist.score
-        }))
-      ].sort((a, b) => b.relevance_score - a.relevance_score).slice(0, limit);
-
-      const total_results = await Song.countDocuments({ $text: { $search: query } }) +
-                            await Album.countDocuments({ $text: { $search: query } }) +
-                            await Artist.countDocuments({ $text: { $search: query } });
-
-      callback(null, { results, total_results });
-    } catch (error) {
-      callback(error);
+      callback(null, { results: formattedResults, total_results: totalResults });
+    } catch (err) {
+      console.error('Search error:', err);
+      callback({
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
+      });
     }
   },
 
@@ -101,31 +87,63 @@ const searchService = {
   },
 
   AdvancedSearch: async (call, callback) => {
-    const { query, filters, sort, limit, offset } = call.request;
+    const { query, filters, sort, limit = 10, offset = 0 } = call.request;
     try {
-      let searchQuery = { $text: { $search: query } };
+      let searchQuery = query ? { $text: { $search: query } } : {};
+      
+      // Apply filters
       filters.forEach(filter => {
-        searchQuery[filter.field] = filter.value;
+        switch (filter.operator) {
+          case 'eq':
+            searchQuery[filter.field] = filter.value;
+            break;
+          case 'gte':
+            searchQuery[filter.field] = { $gte: filter.value };
+            break;
+          case 'lte':
+            searchQuery[filter.field] = { $lte: filter.value };
+            break;
+          // Add more operators as needed
+        }
       });
+
+      let sortOption = {};
+      if (sort && sort.field) {
+        sortOption[sort.field] = sort.order === 'desc' ? -1 : 1;
+      }
+      if (query) {
+        sortOption.score = { $meta: "textScore" };
+      }
 
       const results = await Song.find(
         searchQuery,
         { score: { $meta: "textScore" } }
-      ).sort({ [sort.field]: sort.order, score: { $meta: "textScore" } }).skip(offset).limit(limit);
+      )
+        .sort(sortOption)
+        .skip(offset)
+        .limit(limit)
+        .lean();
 
-      const searchResults = results.map(result => ({
-        id: result._id,
-        type: 'song',
+      const totalResults = await Song.countDocuments(searchQuery);
+
+      const formattedResults = results.map(result => ({
+        id: result._id.toString(),
+        type: "song",
         title: result.title,
         artist: result.artist,
-        relevance_score: result.score
+        album: result.album,
+        year: result.year,
+        relevance_score: result.score || 0
       }));
 
-      const total_results = await Song.countDocuments(searchQuery);
-
-      callback(null, { results: searchResults, total_results });
-    } catch (error) {
-      callback(error);
+      callback(null, { results: formattedResults, total_results: totalResults });
+    } catch (err) {
+      console.error('Search error:', err);
+      callback({
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
+      });
     }
   },
 

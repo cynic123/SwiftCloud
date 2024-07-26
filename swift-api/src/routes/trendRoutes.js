@@ -17,7 +17,7 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const trendProto = grpc.loadPackageDefinition(packageDefinition).trend;
 
-const client = new trendProto.TrendService('localhost:50053', grpc.credentials.createInsecure());
+const client = new trendProto.TrendService('localhost:3004', grpc.credentials.createInsecure());
 
 // Get overall trends
 router.get('/', (req, res) => {

@@ -1,0 +1,11 @@
+{
+  "packages": [
+    "swift-api",
+    "services/*"
+  ],
+  "version": "0.0.0",
+  "npmClient": "npm",
+  "workspaces": "false",
+  "$schema": "node_modules/lerna/schemas/lerna-schema.json",
+  "useWorkspaces": false
+}

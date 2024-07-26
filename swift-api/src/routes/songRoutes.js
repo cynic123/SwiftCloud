@@ -17,111 +17,71 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const songProto = grpc.loadPackageDefinition(packageDefinition).song;
 
-const client = new songProto.SongService('localhost:50051', grpc.credentials.createInsecure());
+const SONG_SERVICE_PORT = process.env.SONG_SERVICE_PORT || 3001;
+const client = new songProto.SongService(`localhost:${SONG_SERVICE_PORT}`, grpc.credentials.createInsecure());
 
-// Get all songs
 router.get('/', (req, res) => {
-    const { limit = 10, offset = 0 } = req.query;
-    client.GetAllSongs({ limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
+    client.GetAllSongs({}, (err, response) => {
         if (err) {
             console.error('Error:', err);
             return res.status(500).json({ error: 'Internal Server Error' });
         }
-        res.json(response);
+        res.json(response.songs);
     });
 });
 
-// Get a song by ID
-router.get('/:id', (req, res) => {
-    const { id } = req.params;
-    client.GetSongById({ id }, (err, response) => {
-        if (err) {
-            if (err.code === grpc.status.NOT_FOUND) {
-                return res.status(404).json({ error: 'Song not found' });
-            }
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
-});
-
-// Get songs by year
 router.get('/year/:year', (req, res) => {
-    const { year } = req.params;
-    client.GetSongsByYear({ year: parseInt(year) }, (err, response) => {
+    const year = parseInt(req.params.year);
+    client.GetSongsByYear({ year }, (err, response) => {
         if (err) {
             console.error('Error:', err);
             return res.status(500).json({ error: 'Internal Server Error' });
         }
-        res.json(response);
+        res.json(response.songs);
     });
 });
 
-// Create a new song
-router.post('/', (req, res) => {
-    const songData = req.body;
-    client.CreateSong(songData, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.status(201).json(response);
-    });
-});
-
-// Update a song
-router.put('/:id', (req, res) => {
-    const { id } = req.params;
-    const songData = { id, ...req.body };
-    client.UpdateSong(songData, (err, response) => {
-        if (err) {
-            if (err.code === grpc.status.NOT_FOUND) {
-                return res.status(404).json({ error: 'Song not found' });
-            }
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
-});
-
-// Delete a song
-router.delete('/:id', (req, res) => {
-    const { id } = req.params;
-    client.DeleteSong({ id }, (err, response) => {
-        if (err) {
-            if (err.code === grpc.status.NOT_FOUND) {
-                return res.status(404).json({ error: 'Song not found' });
-            }
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
-});
-
-// Get songs by album
-router.get('/album/:album', (req, res) => {
-    const { album } = req.params;
-    client.GetSongsByAlbum({ album }, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
-});
-
-// Get songs by artist
 router.get('/artist/:artist', (req, res) => {
-    const { artist } = req.params;
+    const artist = req.params.artist;
     client.GetSongsByArtist({ artist }, (err, response) => {
         if (err) {
             console.error('Error:', err);
             return res.status(500).json({ error: 'Internal Server Error' });
         }
-        res.json(response);
+        res.json(response.songs);
+    });
+});
+
+router.get('/writer/:writer', (req, res) => {
+    const writer = req.params.writer;
+    client.GetSongsByWriter({ writer }, (err, response) => {
+        if (err) {
+            console.error('Error:', err);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+        res.json(response.songs);
+    });
+});
+
+router.get('/album/:album', (req, res) => {
+    const album = req.params.album;
+    client.GetSongsByAlbum({ album }, (err, response) => {
+        if (err) {
+            console.error('Error:', err);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+        res.json(response.songs);
+    });
+});
+
+router.get('/month/:month', (req, res) => {
+    const month = req.params.month;
+    client.GetSongsByMonth({ month }, (err, response) => {
+        if (err) {
+            console.error('Error:', err);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+        res.json(response.songs);
     });
 });
 
