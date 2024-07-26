@@ -1,0 +1,29 @@
+{
+  "name": "swiftcloud",
+  "version": "1.0.0",
+  "description": "Taylor Swift music analytics platform",
+  "scripts": {
+    "start": "npm-run-all --parallel start:*",
+    "start:swift-api": "npm run start -w swift-api",
+    "start:song-service": "npm run start -w services/song-service",
+    "start:search-service": "npm run start -w services/search-service",
+    "start:trend-service": "npm run start -w services/trend-service",
+    "start:popularity-service": "npm run start -w services/popularity-service",
+    "dev": "npm-run-all --parallel dev:*",
+    "dev:swift-api": "npm run dev -w swift-api",
+    "dev:song-service": "npm run dev -w services/song-service",
+    "dev:search-service": "npm run dev -w services/search-service",
+    "dev:trend-service": "npm run dev -w services/trend-service",
+    "dev:popularity-service": "npm run dev -w services/popularity-service",
+    "test": "npm-run-all --parallel test:*",
+    "test:swift-api": "npm run test -w swift-api",
+    "test:song-service": "npm run test -w services/song-service",
+    "test:search-service": "npm run test -w services/search-service",
+    "test:trend-service": "npm run test -w services/trend-service",
+    "test:popularity-service": "npm run test -w services/popularity-service",
+    "deploy": "bash deploy.sh"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5"
+  }
+}

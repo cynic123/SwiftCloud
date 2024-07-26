@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package popularity;
+
+service PopularityService {
+  rpc GetMostPopularSongs (PopularityRequest) returns (SongPopularityList) {}
+  rpc GetSongPopularity (SongRequest) returns (SongPopularity) {}
+  rpc GetMostPopularAlbums (PopularityRequest) returns (AlbumPopularityList) {}
+  rpc GetAlbumPopularity (AlbumRequest) returns (AlbumPopularity) {}
+  rpc GetPopularityByGenre (GenreRequest) returns (GenrePopularityList) {}
+  rpc GetPopularityOverTime (PopularityOverTimeRequest) returns (PopularityOverTimeResponse) {}
+  rpc GetArtistPopularity (ArtistRequest) returns (ArtistPopularity) {}
+  rpc GetPopularityComparison (ComparisonRequest) returns (PopularityComparison) {}
+}
+
+message PopularityRequest {
+  string period = 1; // e.g., "daily", "weekly", "monthly", "all_time"
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message SongRequest {
+  string song_id = 1;
+}
+
+message AlbumRequest {
+  string album_id = 1;
+}
+
+message GenreRequest {
+  repeated string genres = 1;
+  string period = 2;
+}
+
+message PopularityOverTimeRequest {
+  string id = 1;
+  string type = 2; // "song", "album", or "artist"
+  string start_date = 3;
+  string end_date = 4;
+}
+
+message ArtistRequest {
+  string artist_id = 1;
+}
+
+message ComparisonRequest {
+  string type = 1; // "song", "album", or "artist"
+  repeated string ids = 2;
+  string period = 3;
+}
+
+message SongPopularity {
+  string song_id = 1;
+  string title = 2;
+  string artist = 3;
+  int32 play_count = 4;
+  float popularity_score = 5;
+  int32 rank = 6;
+}
+
+message SongPopularityList {
+  repeated SongPopularity songs = 1;
+  int32 total_count = 2;
+}
+
+message AlbumPopularity {
+  string album_id = 1;
+  string title = 2;
+  string artist = 3;
+  int32 play_count = 4;
+  float popularity_score = 5;
+  int32 rank = 6;
+}
+
+message AlbumPopularityList {
+  repeated AlbumPopularity albums = 1;
+  int32 total_count = 2;
+}
+
+message GenrePopularity {
+  string genre = 1;
+  int32 play_count = 2;
+  float popularity_score = 3;
+  int32 rank = 4;
+}
+
+message GenrePopularityList {
+  repeated GenrePopularity genres = 1;
+}
+
+message PopularityDataPoint {
+  string date = 1;
+  int32 play_count = 2;
+  float popularity_score = 3;
+}
+
+message PopularityOverTimeResponse {
+  string id = 1;
+  string type = 2;
+  string name = 3;
+  repeated PopularityDataPoint data_points = 4;
+}
+
+message ArtistPopularity {
+  string artist_id = 1;
+  string name = 2;
+  int32 total_play_count = 3;
+  float popularity_score = 4;
+  int32 rank = 5;
+  repeated SongPopularity top_songs = 6;
+}
+
+message PopularityComparison {
+  string type = 1;
+  repeated EntityPopularity entities = 2;
+}
+
+message EntityPopularity {
+  string id = 1;
+  string name = 2;
+  int32 play_count = 3;
+  float popularity_score = 4;
+  int32 rank = 5;
+}
