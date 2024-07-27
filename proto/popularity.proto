@@ -4,7 +4,7 @@ package popularity;
 
 service PopularityService {
   rpc GetMostPopularSongs (PopularityRequest) returns (MonthlySongs) {}
-  rpc GetSongPopularity (SongRequest) returns (SongPopularity) {}
+  rpc GetSongPopularity (SongPopularityRequest) returns (SongPopularityResponse) {}
   rpc GetMostPopularAlbums (PopularityRequest) returns (AlbumPopularityList) {}
   rpc GetAlbumPopularity (AlbumRequest) returns (AlbumPopularity) {}
   rpc GetPopularityByGenre (GenreRequest) returns (GenrePopularityList) {}
@@ -26,8 +26,8 @@ message PopularityRequest {
   int32 offset = 3;
 }
 
-message SongRequest {
-  string song_id = 1;
+message SongPopularityRequest {
+  string title_query = 1;
 }
 
 message AlbumRequest {
@@ -69,6 +69,10 @@ message SongList {
 
 message MonthlySongs {
   map<string, SongList> months = 1;
+}
+
+message SongPopularityResponse {
+  repeated SongPopularity rankings = 1;
 }
 
 message AlbumPopularity {

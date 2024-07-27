@@ -31,7 +31,7 @@ router.get('/health', (req, res) => {
 });
 
 // Get most popular songs
-router.get('/songs', (req, res) => {
+router.get('/most', (req, res) => {
     const { period = 'monthly', limit = 5, offset = 0 } = req.query;
     console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
   
@@ -40,7 +40,7 @@ router.get('/songs', (req, res) => {
         console.error('gRPC error:', err);
         return res.status(500).json({ error: err.message || 'Internal Server Error' });
       }
-      
+
       if (!response) {
         console.error('Received null response from gRPC service');
         return res.status(500).json({ error: 'Received null response from service' });
@@ -62,14 +62,28 @@ router.get('/songs', (req, res) => {
     });
   });
 
-// Get popularity of a specific song
-router.get('/songs/:id', (req, res) => {
-    const { id } = req.params;
-    client.GetSongPopularity({ song_id: id }, (err, response) => {
+  router.get('/song', (req, res) => {
+    const { title } = req.query;
+
+    console.log(`Received request with title: "${title}"`);
+
+    if (!title) {
+        console.log('No title provided, returning 400 error');
+        return res.status(400).json({ error: 'Title query is required' });
+    }
+
+    client.GetSongPopularity({ title_query: title }, (err, response) => {
         if (err) {
-            console.error('Error:', err);
+            console.error('gRPC error:', err);
+            if (err.code === grpc.status.NOT_FOUND) {
+                console.log('No songs found, returning 404 error');
+                return res.status(404).json({ error: 'No songs found' });
+            }
+            console.log('Internal server error, returning 500 error');
             return res.status(500).json({ error: 'Internal Server Error' });
         }
+
+        console.log('Received response from gRPC service:', JSON.stringify(response, null, 2));
         res.json(response);
     });
 });

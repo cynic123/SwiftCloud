@@ -100,12 +100,7 @@ const popularityService = {
         ];
       }
   
-      console.log('Aggregation Pipeline:', JSON.stringify(aggregationPipeline, null, 2));
-  
       const result = await Song.aggregate(aggregationPipeline);
-  
-      console.log(`Found ${result.length} ${period === 'monthly' ? 'months' : 'songs'}`);
-      console.log('Raw MongoDB result:', JSON.stringify(result, null, 2));
   
       let response;
       if (period === 'monthly') {
@@ -119,15 +114,10 @@ const popularityService = {
         response = { songs: result };
       }
   
-      console.log('Formatted response:', JSON.stringify(response, null, 2));
-      console.log('Response keys:', Object.keys(response));
-      console.log('Is response empty?', Object.keys(response.months || {}).length === 0);
-  
       if (Object.keys(response.months || {}).length === 0 && (!response.songs || response.songs.length === 0)) {
         console.error('Empty response generated. Check MongoDB query and data.');
         callback(new Error('No data found'), null);
       } else {
-        console.log('Sending response to client');
         callback(null, response);
       }
     } catch (error) {
@@ -137,28 +127,77 @@ const popularityService = {
   },
 
   GetSongPopularity: async (call, callback) => {
-    const { songId } = call.request;
+    const { title_query } = call.request;
+    console.log(`Received title query: "${title_query}"`);
+
     try {
-      const song = await Song.findById(songId);
-      if (!song) {
+      // Find songs that match the title query
+      const matchingSongs = await Song.find({
+        title: { $regex: `^${title_query}`, $options: 'i' }
+      });
+
+      console.log(`Found ${matchingSongs.length} songs matching the query`);
+      console.log('Matching songs:', matchingSongs.map(s => s.title));
+
+      if (matchingSongs.length === 0) {
+        console.log('No songs found, returning NOT_FOUND error');
         return callback({
           code: grpc.status.NOT_FOUND,
-          details: "Song not found"
+          details: "No songs found"
         });
       }
 
-      const totalPlays = song.plays.reduce((sum, play) => sum + play.count, 0);
-      const popularityScore = totalPlays / moment().diff(moment(song.plays[0].date), 'days');
+      // Fetch all songs
+      const allSongs = await Song.find();
 
-      callback(null, {
-        songId: song._id,
-        title: song.title,
-        artist: song.artist,
-        playCount: totalPlays,
-        popularityScore
+      console.log(`Found ${allSongs.length} songs in total`);
+
+      // Aggregate play counts across all months for each song
+      const songPlayCounts = allSongs.map(song => {
+        const totalPlayCount = song.plays.reduce((sum, play) => sum + play.count, 0);
+        console.log(`Song: ${song.title}, Total Play Count: ${totalPlayCount}`);
+        return {
+          songId: song._id.toString(),
+          title: song.title,
+          artist: song.artist,
+          totalPlayCount
+        };
       });
+
+      // Sort songs by total play count and add rank
+      songPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
+      songPlayCounts.forEach((song, index) => {
+        song.rank = index + 1;
+      });
+
+      // Filter the song play counts to include only the matching songs
+      const filteredSongPlayCounts = songPlayCounts.filter(song =>
+        matchingSongs.some(ms => ms._id.toString() === song.songId)
+      );
+
+      // Log filtered song play counts
+      console.log('Filtered song play counts:', JSON.stringify(filteredSongPlayCounts, null, 2));
+
+      // Ensure playCount is included in the response
+      const response = {
+        rankings: filteredSongPlayCounts.map(song => ({
+          songId: song.songId,
+          title: song.title,
+          artist: song.artist,
+          play_count: song.totalPlayCount, // Ensure play_count is correctly set
+          rank: song.rank
+        }))
+      };
+
+      console.log('Response:', JSON.stringify(response, null, 2));
+
+      callback(null, response);
     } catch (error) {
-      callback(error);
+      console.error('Error in GetSongPopularity:', error);
+      callback({
+        code: grpc.status.INTERNAL,
+        details: "Internal server error"
+      });
     }
   },
 
