@@ -32,15 +32,35 @@ router.get('/health', (req, res) => {
 
 // Get most popular songs
 router.get('/songs', (req, res) => {
-    const { period = 'all_time', limit = 10, offset = 0 } = req.query;
+    const { period = 'monthly', limit = 5, offset = 0 } = req.query;
+    console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
+  
     client.GetMostPopularSongs({ period, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
+      if (err) {
+        console.error('gRPC error:', err);
+        return res.status(500).json({ error: err.message || 'Internal Server Error' });
+      }
+      
+      if (!response) {
+        console.error('Received null response from gRPC service');
+        return res.status(500).json({ error: 'Received null response from service' });
+      }
+  
+      if (period === 'monthly') {
+        if (!response.months || Object.keys(response.months).length === 0) {
+          console.error('Received empty monthly response from gRPC service');
+          return res.status(404).json({ error: 'No data found' });
         }
-        res.json(response);
+        res.json(response.months);
+      } else {
+        if (!response.songs || response.songs.length === 0) {
+          console.error('Received empty all-time response from gRPC service');
+          return res.status(404).json({ error: 'No data found' });
+        }
+        res.json(response.songs);
+      }
     });
-});
+  });
 
 // Get popularity of a specific song
 router.get('/songs/:id', (req, res) => {

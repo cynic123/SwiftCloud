@@ -58,3 +58,28 @@ Factors Affecting the Score:
 3. Document length: Longer documents might have lower scores for the same term frequency.
 4. Exact matches vs partial matches: Exact phrase matches typically score higher.
 
+swift-api: gRPC error: Error: 2 UNKNOWN: Aggregate has empty pipeline
+swift-api:     at callErrorFromStatus (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/call.js:31:19)
+swift-api:     at Object.onReceiveStatus (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/client.js:193:76)
+swift-api:     at Object.onReceiveStatus (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/client-interceptors.js:360:141)
+swift-api:     at Object.onReceiveStatus (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/client-interceptors.js:323:181)
+swift-api:     at /Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/resolving-call.js:129:78
+swift-api:     at process.processTicksAndRejections (node:internal/process/task_queues:77:11)
+swift-api: for call at
+swift-api:     at ServiceClientImpl.makeUnaryRequest (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/client.js:161:32)
+swift-api:     at ServiceClientImpl.<anonymous> (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/make-client.js:105:19)
+swift-api:     at /Users/prithwish.samanta/workspace/SwiftCloud/swift-api/src/routes/popularityRoutes.js:38:12
+swift-api:     at Layer.handle [as handle_request] (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/layer.js:95:5)
+swift-api:     at next (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/route.js:149:13)
+swift-api:     at Route.dispatch (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/route.js:119:3)
+swift-api:     at Layer.handle [as handle_request] (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/layer.js:95:5)
+swift-api:     at /Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/index.js:284:15
+swift-api:     at Function.process_params (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/index.js:346:12)
+swift-api:     at next (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/index.js:280:10) {
+swift-api:   code: 2,
+swift-api:   details: 'Aggregate has empty pipeline',
+swift-api:   metadata: Metadata {
+swift-api:     internalRepr: Map(2) { 'content-type' => [Array], 'date' => [Array] },
+swift-api:     options: {}
+swift-api:   }
+swift-api: }
