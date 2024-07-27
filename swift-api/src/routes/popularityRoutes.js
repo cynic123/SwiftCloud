@@ -34,35 +34,38 @@ router.get('/health', (req, res) => {
 router.get('/most', (req, res) => {
     const { period = 'monthly', limit = 5, offset = 0 } = req.query;
     console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
-  
+
     client.GetMostPopularSongs({ period, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
-      if (err) {
-        console.error('gRPC error:', err);
-        return res.status(500).json({ error: err.message || 'Internal Server Error' });
-      }
+        if (err) {
+            console.error('gRPC error:', err);
+            return res.status(500).json({ error: err.message || 'Internal Server Error' });
+        }
 
-      if (!response) {
-        console.error('Received null response from gRPC service');
-        return res.status(500).json({ error: 'Received null response from service' });
-      }
-  
-      if (period === 'monthly') {
-        if (!response.months || Object.keys(response.months).length === 0) {
-          console.error('Received empty monthly response from gRPC service');
-          return res.status(404).json({ error: 'No data found' });
+        if (!response) {
+            console.error('Received null response from gRPC service');
+            return res.status(500).json({ error: 'Received null response from service' });
         }
-        res.json(response.months);
-      } else {
-        if (!response.songs || response.songs.length === 0) {
-          console.error('Received empty all-time response from gRPC service');
-          return res.status(404).json({ error: 'No data found' });
+
+        if (period === 'monthly') {
+            if (!response.months || Object.keys(response.months).length === 0) {
+                console.error('Received empty monthly response from gRPC service');
+                return res.status(404).json({ error: 'No data found' });
+            }
+            res.json(response.months);
+        } else {
+            if (!response.songs || response.songs.length === 0) {
+                console.error('Received empty all-time response from gRPC service');
+                return res.status(404).json({ error: 'No data found' });
+            }
+            res.json(response.songs);
         }
-        res.json(response.songs);
-      }
     });
-  });
+});
 
-  router.get('/song', (req, res) => {
+/* Get overall rankings of songs that match or start with the user's search title, aggregated across all 
+ * available months in the input dataset.
+ */
+router.get('/song', (req, res) => {
     const { title } = req.query;
 
     console.log(`Received request with title: "${title}"`);
