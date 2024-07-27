@@ -198,25 +198,25 @@ const popularityService = {
   GetMostPopularAlbums: async (call, callback) => {
     const { period, limit = 10, offset = 0 } = call.request;
     console.log(`Received request with period: "${period}", limit: ${limit}, offset: ${offset}`);
-  
+
     try {
       // Fetch all albums
       const allAlbums = await Album.find();
       console.log(`Found ${allAlbums.length} albums in total`);
-  
+
       // Log the structure of fetched albums
       allAlbums.forEach(album => {
         console.log(`Album Document: ${JSON.stringify(album._doc, null, 2)}`);
         console.log(`Album Name Direct Access: ${album._doc.name}`);
       });
-  
+
       // Aggregate play counts across all months for each album
       const albumPlayCounts = allAlbums.map(album => {
-        const totalPlayCount = album.plays && album.plays.length > 0 
+        const totalPlayCount = album.plays && album.plays.length > 0
           ? album.plays.reduce((sum, play) => {
-              console.log(`Processing play for album ${album._doc.name}: month=${play._doc.month}, count=${play._doc.count}`);
-              return sum + play._doc.count;
-            }, 0)
+            console.log(`Processing play for album ${album._doc.name}: month=${play._doc.month}, count=${play._doc.count}`);
+            return sum + play._doc.count;
+          }, 0)
           : 0;
         console.log(`Album: ${album._doc.name}, Total Play Count: ${totalPlayCount}`);
         return {
@@ -226,16 +226,16 @@ const popularityService = {
           totalPlayCount
         };
       });
-  
+
       // Sort albums by total play count and add rank
       albumPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
       albumPlayCounts.forEach((album, index) => {
         album.rank = index + 1;
       });
-  
+
       // Paginate the results
       const paginatedAlbums = albumPlayCounts.slice(offset, offset + limit);
-  
+
       const response = {
         albums: paginatedAlbums.map(album => ({
           name: album.name,
@@ -246,7 +246,7 @@ const popularityService = {
         })),
         total_count: allAlbums.length
       };
-  
+
       callback(null, response);
     } catch (error) {
       console.error('Error in GetMostPopularAlbums:', error);
@@ -261,110 +261,65 @@ const popularityService = {
     const { name } = call.request;
     console.log(`Received name query: "${name}"`);
 
-    try {     
-        // Find albums that match the name query
-        const matchingAlbums = await Album.find({
-          name: { $regex: `^${name}`, $options: 'i' }
-        });
-
-        console.log(`Found ${matchingAlbums.length} albums matching the query`);
-        console.log('Matching albums:', matchingAlbums.map(a => a._doc.name));
-
-        if (matchingAlbums.length === 0) {
-            console.log('No albums found, returning NOT_FOUND error');
-            return callback({
-                code: grpc.status.NOT_FOUND,
-                details: "No albums found"
-            });
-        }
-
-        // Fetch all albums
-        const allAlbums = await Album.find();
-
-        console.log(`Found ${allAlbums.length} albums in total`);
-
-        // Aggregate play counts across all months for each album
-        const albumPlayCounts = allAlbums.map(album => {
-            const totalPlayCount = album.plays ? album.plays.reduce((sum, play) => sum + play._doc.count, 0) : 0;
-            return {
-                name: album._doc.name,
-                artist: album._doc.artist || '',
-                totalPlayCount
-            };
-        });
-
-        // Sort albums by total play count and add rank
-        albumPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
-        albumPlayCounts.forEach((album, index) => {
-            album.rank = index + 1;
-        });
-
-        // Filter the album play counts to include only the matching albums
-        const filteredAlbumPlayCounts = albumPlayCounts.filter(album =>
-            matchingAlbums.some(ma => ma._doc.name === album.name)
-        );
-
-        const response = {
-            rankings: filteredAlbumPlayCounts.map(album => ({
-                name: album.name,
-                artist: album.artist,
-                play_count: album.totalPlayCount,
-                rank: album.rank
-            }))
-        };
-
-        callback(null, response);
-    } catch (error) {
-        console.error('Error in GetAlbumPopularity:', error);
-        callback({
-            code: grpc.status.INTERNAL,
-            details: "Internal server error"
-        });
-    }
-},
-
-  GetPopularityOverTime: async (call, callback) => {
-    const { id, type, startDate, endDate } = call.request;
     try {
-      let Model;
-      switch (type) {
-        case 'song':
-          Model = Song;
-          break;
-        case 'album':
-          Model = Album;
-          break;
-        case 'artist':
-          Model = Artist;
-          break;
-        default:
-          throw new Error('Invalid entity type');
-      }
+      // Find albums that match the name query
+      const matchingAlbums = await Album.find({
+        name: { $regex: `^${name}`, $options: 'i' }
+      });
 
-      const entity = await Model.findById(id);
-      if (!entity) {
+      console.log(`Found ${matchingAlbums.length} albums matching the query`);
+      console.log('Matching albums:', matchingAlbums.map(a => a._doc.name));
+
+      if (matchingAlbums.length === 0) {
+        console.log('No albums found, returning NOT_FOUND error');
         return callback({
           code: grpc.status.NOT_FOUND,
-          details: `${type} not found`
+          details: "No albums found"
         });
       }
 
-      const popularityData = entity.plays
-        .filter(play => moment(play.date).isBetween(startDate, endDate, null, '[]'))
-        .map(play => ({
-          date: play.date,
-          playCount: play.count,
-          popularityScore: play.count / moment(endDate).diff(moment(startDate), 'days')
-        }));
+      // Fetch all albums
+      const allAlbums = await Album.find();
 
-      callback(null, {
-        id: entity._id,
-        type,
-        name: entity.title || entity.name,
-        popularityData
+      console.log(`Found ${allAlbums.length} albums in total`);
+
+      // Aggregate play counts across all months for each album
+      const albumPlayCounts = allAlbums.map(album => {
+        const totalPlayCount = album.plays ? album.plays.reduce((sum, play) => sum + play._doc.count, 0) : 0;
+        return {
+          name: album._doc.name,
+          artist: album._doc.artist || '',
+          totalPlayCount
+        };
       });
+
+      // Sort albums by total play count and add rank
+      albumPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
+      albumPlayCounts.forEach((album, index) => {
+        album.rank = index + 1;
+      });
+
+      // Filter the album play counts to include only the matching albums
+      const filteredAlbumPlayCounts = albumPlayCounts.filter(album =>
+        matchingAlbums.some(ma => ma._doc.name === album.name)
+      );
+
+      const response = {
+        rankings: filteredAlbumPlayCounts.map(album => ({
+          name: album.name,
+          artist: album.artist,
+          play_count: album.totalPlayCount,
+          rank: album.rank
+        }))
+      };
+
+      callback(null, response);
     } catch (error) {
-      callback(error);
+      console.error('Error in GetAlbumPopularity:', error);
+      callback({
+        code: grpc.status.INTERNAL,
+        details: "Internal server error"
+      });
     }
   }
 };
