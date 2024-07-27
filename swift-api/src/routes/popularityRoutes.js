@@ -85,13 +85,13 @@ router.get('/songs/song', (req, res) => {
             console.error('Internal server error, returning 500 error');
             return res.status(500).json({ error: 'Internal Server Error' });
         }
-        
+
         res.json(response);
     });
 });
 
 // Get most popular albums
-router.get('/albums', (req, res) => {
+router.get('/albums/most', (req, res) => {
     const { period = 'all_time', limit = 10, offset = 0 } = req.query;
     client.GetMostPopularAlbums({ period, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
         if (err) {
@@ -103,8 +103,8 @@ router.get('/albums', (req, res) => {
 });
 
 // Get popularity of a specific album
-router.get('/albums/:id', (req, res) => {
-    const { id } = req.params;
+router.get('/albums/album', (req, res) => {
+    const { name } = req.params;
     client.GetAlbumPopularity({ album_id: id }, (err, response) => {
         if (err) {
             console.error('Error:', err);

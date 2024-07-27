@@ -3,10 +3,10 @@ syntax = "proto3";
 package popularity;
 
 service PopularityService {
-  rpc GetMostPopularSongs (PopularityRequest) returns (MonthlySongs) {}
+  rpc GetMostPopularSongs (PopularityRequest) returns (PopularSongsResponse) {}
   rpc GetSongPopularity (SongPopularityRequest) returns (SongPopularityResponse) {}
-  rpc GetMostPopularAlbums (PopularityRequest) returns (AlbumPopularityList) {}
-  rpc GetAlbumPopularity (AlbumRequest) returns (AlbumPopularity) {}
+  rpc GetMostPopularAlbums (PopularityRequest) returns (PopularAlbumsResponse) {}
+  rpc GetAlbumPopularity (AlbumPopularityRequest) returns (AlbumPopularityResponse) {}
   rpc GetPopularityByGenre (GenreRequest) returns (GenrePopularityList) {}
   rpc GetPopularityOverTime (PopularityOverTimeRequest) returns (PopularityOverTimeResponse) {}
   rpc GetArtistPopularity (ArtistRequest) returns (ArtistPopularity) {}
@@ -30,8 +30,8 @@ message SongPopularityRequest {
   string title = 1;
 }
 
-message AlbumRequest {
-  string album_id = 1;
+message AlbumPopularityRequest {
+  string name = 1;
 }
 
 message GenreRequest {
@@ -67,7 +67,7 @@ message SongList {
   repeated SongPopularity songs = 1;
 }
 
-message MonthlySongs {
+message PopularSongsResponse {
   map<string, SongList> months = 1;
 }
 
@@ -76,15 +76,18 @@ message SongPopularityResponse {
 }
 
 message AlbumPopularity {
-  string album_id = 1;
-  string title = 2;
-  string artist = 3;
+  string name = 1;
+  string artist = 2;
+  repeated string writers = 3;
   int32 play_count = 4;
-  float popularity_score = 5;
-  int32 rank = 6;
+  int32 rank = 5;
 }
 
-message AlbumPopularityList {
+message AlbumPopularityResponse {
+  repeated AlbumPopularity album_popularity = 1;
+}
+
+message PopularAlbumsResponse {
   repeated AlbumPopularity albums = 1;
   int32 total_count = 2;
 }

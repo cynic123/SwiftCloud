@@ -26,7 +26,7 @@ async function importData() {
     await albumsCollection.deleteMany({});
 
     const artistsSet = new Set();
-    const albumsSet = new Set();
+    const albumsMap = new Map();
 
     const results = [];
     await new Promise((resolve, reject) => {
@@ -41,20 +41,36 @@ async function importData() {
       const song = {
         title: row.Song,
         artist: row.Artist,
-        writers: row.Writer.split('\n').map(writer => writer.trim()), // Split and trim writers
+        writers: row.Writer ? row.Writer.split('\n').map(writer => writer.trim()) : [], // Split and trim writers
         album: row.Album,
-        year: parseInt(row.Year),
+        year: parseInt(row.Year) || null,
         plays: [
-          { month: 'June', count: parseInt(row['Plays - June']) },
-          { month: 'July', count: parseInt(row['Plays - July']) },
-          { month: 'August', count: parseInt(row['Plays - August']) }
+          { month: 'June', count: parseInt(row['Plays - June']) || 0 },
+          { month: 'July', count: parseInt(row['Plays - July']) || 0 },
+          { month: 'August', count: parseInt(row['Plays - August']) || 0 }
         ]
       };
 
       await songsCollection.insertOne(song);
 
       artistsSet.add(row.Artist);
-      albumsSet.add(row.Album);
+
+      if (!albumsMap.has(row.Album)) {
+        albumsMap.set(row.Album, {
+          name: row.Album,
+          artist: row.Artist,
+          writers: new Set(song.writers),
+          plays: [...song.plays]
+        });
+      } else {
+        const album = albumsMap.get(row.Album);
+        album.writers = new Set([...album.writers, ...song.writers]);
+        album.plays = album.plays.map((play, index) => ({
+          month: play.month,
+          count: play.count + song.plays[index].count
+        }));
+        albumsMap.set(row.Album, album);
+      }
     }
 
     // Insert artists
@@ -63,13 +79,14 @@ async function importData() {
     }
 
     // Insert albums
-    for (const album of albumsSet) {
-      await albumsCollection.insertOne({ title: album });
+    for (const [albumName, albumData] of albumsMap.entries()) {
+      albumData.writers = Array.from(albumData.writers); // Convert writers set to array
+      await albumsCollection.insertOne(albumData);
     }
 
     console.log(`Imported ${results.length} songs`);
     console.log(`Imported ${artistsSet.size} artists`);
-    console.log(`Imported ${albumsSet.size} albums`);
+    console.log(`Imported ${albumsMap.size} albums`);
 
     console.log("Data import completed");
   } catch (err) {
