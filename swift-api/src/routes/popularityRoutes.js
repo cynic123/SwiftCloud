@@ -62,7 +62,7 @@ router.get('/songs/most', (req, res) => {
     });
 });
 
-/* Get overall rankings of songs that match or start with the user's search title, aggregated across all 
+/* Get overall rankings of songs that match or start with the user's searched title, aggregated across all 
  * available months in the input dataset.
  */
 router.get('/songs/song', (req, res) => {
@@ -75,7 +75,7 @@ router.get('/songs/song', (req, res) => {
         return res.status(400).json({ error: 'Title query is required' });
     }
 
-    client.GetSongPopularity({ song: title }, (err, response) => {
+    client.GetSongPopularity({ title }, (err, response) => {
         if (err) {
             console.error('gRPC error:', err);
             if (err.code === grpc.status.NOT_FOUND) {
@@ -102,60 +102,24 @@ router.get('/albums/most', (req, res) => {
     });
 });
 
-// Get popularity of a specific album
+/* Get overall rankings of albums that match or start with the user's searched name, aggregated across all 
+ * available months in the input dataset.
+ */
 router.get('/albums/album', (req, res) => {
-    const { name } = req.params;
-    client.GetAlbumPopularity({ album_id: id }, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
-});
-
-// Get popularity by genre
-router.get('/genres', (req, res) => {
-    const { genres, period = 'all_time' } = req.query;
-    const genreList = genres ? genres.split(',') : [];
-    client.GetPopularityByGenre({ genres: genreList, period }, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
+  const { name } = req.query;  // Use req.query to get the name parameter
+  client.GetAlbumPopularity({ name }, (err, response) => {
+      if (err) {
+          console.error('Error:', err);
+          return res.status(500).json({ error: 'Internal Server Error' });
+      }
+      res.json(response);
+  });
 });
 
 // Get popularity over time
 router.get('/over-time', (req, res) => {
     const { id, type, startDate, endDate } = req.query;
     client.GetPopularityOverTime({ id, type, start_date: startDate, end_date: endDate }, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
-});
-
-// Get artist popularity
-router.get('/artists/:id', (req, res) => {
-    const { id } = req.params;
-    client.GetArtistPopularity({ artist_id: id }, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
-});
-
-// Get popularity comparison
-router.get('/compare', (req, res) => {
-    const { type, ids, period = 'all_time' } = req.query;
-    const idList = ids ? ids.split(',') : [];
-    client.GetPopularityComparison({ type, ids: idList, period }, (err, response) => {
         if (err) {
             console.error('Error:', err);
             return res.status(500).json({ error: 'Internal Server Error' });

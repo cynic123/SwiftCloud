@@ -78,13 +78,12 @@ message SongPopularityResponse {
 message AlbumPopularity {
   string name = 1;
   string artist = 2;
-  repeated string writers = 3;
   int32 play_count = 4;
   int32 rank = 5;
 }
 
 message AlbumPopularityResponse {
-  repeated AlbumPopularity album_popularity = 1;
+  repeated AlbumPopularity rankings = 1;
 }
 
 message PopularAlbumsResponse {

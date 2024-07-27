@@ -4,8 +4,6 @@ const songSchema = new mongoose.Schema({
   title: String,
   artist: String,
   album: String,
-  year: Number,
-  genre: String,
   plays: [{
     date: Date,
     count: Number
@@ -13,10 +11,8 @@ const songSchema = new mongoose.Schema({
 });
 
 const albumSchema = new mongoose.Schema({
-  title: String,
+  name: String,
   artist: String,
-  year: Number,
-  genre: String,
   plays: [{
     date: Date,
     count: Number
