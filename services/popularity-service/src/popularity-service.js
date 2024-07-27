@@ -20,7 +20,7 @@ const popularityService = {
     console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
     try {
       let aggregationPipeline;
-
+  
       if (period === 'monthly') {
         aggregationPipeline = [
           { $unwind: '$plays' },
@@ -57,7 +57,6 @@ const popularityService = {
                     $mergeObjects: [
                       '$$this',
                       {
-                        popularity_score: { $divide: ['$$this.play_count', '$maxPlayCount'] },
                         rank: { $add: [{ $indexOfArray: ['$songs', '$$this'] }, 1] }
                       }
                     ]
@@ -95,20 +94,19 @@ const popularityService = {
               title: '$songs.title',
               artist: '$songs.artist',
               play_count: '$songs.totalPlays',
-              popularity_score: { $divide: ['$songs.totalPlays', '$maxPlayCount'] },
               rank: { $add: ['$index', 1] }
             }
           }
         ];
       }
-
+  
       console.log('Aggregation Pipeline:', JSON.stringify(aggregationPipeline, null, 2));
-
+  
       const result = await Song.aggregate(aggregationPipeline);
-
+  
       console.log(`Found ${result.length} ${period === 'monthly' ? 'months' : 'songs'}`);
       console.log('Raw MongoDB result:', JSON.stringify(result, null, 2));
-
+  
       let response;
       if (period === 'monthly') {
         response = {
@@ -120,11 +118,11 @@ const popularityService = {
       } else {
         response = { songs: result };
       }
-
+  
       console.log('Formatted response:', JSON.stringify(response, null, 2));
       console.log('Response keys:', Object.keys(response));
       console.log('Is response empty?', Object.keys(response.months || {}).length === 0);
-
+  
       if (Object.keys(response.months || {}).length === 0 && (!response.songs || response.songs.length === 0)) {
         console.error('Empty response generated. Check MongoDB query and data.');
         callback(new Error('No data found'), null);
