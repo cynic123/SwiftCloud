@@ -20,7 +20,7 @@ const popularityService = {
     console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
     try {
       let aggregationPipeline;
-  
+
       if (period === 'monthly') {
         aggregationPipeline = [
           { $unwind: '$plays' },
@@ -99,9 +99,9 @@ const popularityService = {
           }
         ];
       }
-  
+
       const result = await Song.aggregate(aggregationPipeline);
-  
+
       let response;
       if (period === 'monthly') {
         response = {
@@ -113,7 +113,7 @@ const popularityService = {
       } else {
         response = { songs: result };
       }
-  
+
       if (Object.keys(response.months || {}).length === 0 && (!response.songs || response.songs.length === 0)) {
         console.error('Empty response generated. Check MongoDB query and data.');
         callback(new Error('No data found'), null);
@@ -127,13 +127,13 @@ const popularityService = {
   },
 
   GetSongPopularity: async (call, callback) => {
-    const { title_query } = call.request;
-    console.log(`Received title query: "${title_query}"`);
+    const { title } = call.request;
+    console.log(`Received title query: "${title}"`);
 
     try {
       // Find songs that match the title query
       const matchingSongs = await Song.find({
-        title: { $regex: `^${title_query}`, $options: 'i' }
+        title: { $regex: `^${title}`, $options: 'i' }
       });
 
       console.log(`Found ${matchingSongs.length} songs matching the query`);
@@ -155,7 +155,6 @@ const popularityService = {
       // Aggregate play counts across all months for each song
       const songPlayCounts = allSongs.map(song => {
         const totalPlayCount = song.plays.reduce((sum, play) => sum + play.count, 0);
-        console.log(`Song: ${song.title}, Total Play Count: ${totalPlayCount}`);
         return {
           songId: song._id.toString(),
           title: song.title,
@@ -175,9 +174,6 @@ const popularityService = {
         matchingSongs.some(ms => ms._id.toString() === song.songId)
       );
 
-      // Log filtered song play counts
-      console.log('Filtered song play counts:', JSON.stringify(filteredSongPlayCounts, null, 2));
-
       // Ensure playCount is included in the response
       const response = {
         rankings: filteredSongPlayCounts.map(song => ({
@@ -188,8 +184,6 @@ const popularityService = {
           rank: song.rank
         }))
       };
-
-      console.log('Response:', JSON.stringify(response, null, 2));
 
       callback(null, response);
     } catch (error) {

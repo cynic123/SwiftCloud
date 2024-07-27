@@ -27,7 +27,7 @@ message PopularityRequest {
 }
 
 message SongPopularityRequest {
-  string title_query = 1;
+  string title = 1;
 }
 
 message AlbumRequest {
