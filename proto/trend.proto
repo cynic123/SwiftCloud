@@ -22,8 +22,8 @@ message HealthCheckResponse {
 message Empty {}
 
 message PeriodRequest {
-  string start_date = 1;
-  string end_date = 2;
+  string start_month = 1;
+  string end_month = 2;
 }
 
 message TrendingSongsRequest {
@@ -61,11 +61,9 @@ message OverallTrends {
 }
 
 message PeriodTrends {
-  string start_date = 1;
-  string end_date = 2;
-  int32 total_plays = 3;
-  float average_plays_per_song = 4;
-  repeated TrendingSong top_songs = 5;
+  int32 total_plays = 1;
+  float average_plays_per_song = 2;
+  repeated ArtistTrend top_artists = 3;
 }
 
 message TrendingSong {

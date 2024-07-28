@@ -59,15 +59,32 @@ router.get('/overall', (req, res) => {
 	});
 });
 
-// Get trends for a specific time period (top 10 artists with their top top 10 songs)
+// Get trends for a specific period of months (top 10 artists with their top top 10 songs)
 router.get('/period', (req, res) => {
-	const { startDate, endDate } = req.query;
-	client.GetTrendsByPeriod({ startDate, endDate }, (err, response) => {
-		if (err) {
-			console.error('Error:', err);
-			return res.status(500).json({ error: 'Internal Server Error' });
-		}
-		res.json(response);
+	const { start_month, end_month } = req.query;
+	client.GetTrendsByPeriod({ start_month, end_month }, (err, response) => {
+			if (err) {
+					console.error('Error:', err);
+					return res.status(500).json({ error: 'Internal Server Error' });
+			}
+
+			const roundedResponse = {
+					total_plays: Round(response.total_plays, 3),
+					average_plays_per_song: Round(response.average_plays_per_song, 3),
+					top_artists: response.top_artists.map(artist => ({
+							name: artist.name,
+							total_plays: artist.total_plays,
+							average_plays_per_song: Round(artist.average_plays_per_song, 3),
+							growth_rate_per_month: Round(artist.growth_rate_per_month, 3),
+							top_songs: artist.top_songs.map(song => ({
+									title: song.title,
+									plays: song.plays,
+									growth_rate_per_month: Round(song.growth_rate_per_month, 3)
+							}))
+					}))
+			};
+
+			res.json(roundedResponse);
 	});
 });
 
