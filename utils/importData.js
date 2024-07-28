@@ -17,16 +17,16 @@ async function importData() {
 
     const db = client.db(dbName);
     const songsCollection = db.collection('songs');
-    const artistsCollection = db.collection('artists');
     const albumsCollection = db.collection('albums');
+    const artistsCollection = db.collection('artists');
 
     // Clear existing data
     await songsCollection.deleteMany({});
-    await artistsCollection.deleteMany({});
     await albumsCollection.deleteMany({});
+    await artistsCollection.deleteMany({});
 
-    const artistsSet = new Set();
     const albumsMap = new Map();
+    const artistsMap = new Map();
 
     const results = [];
     await new Promise((resolve, reject) => {
@@ -53,8 +53,6 @@ async function importData() {
 
       await songsCollection.insertOne(song);
 
-      artistsSet.add(row.Artist);
-
       if (!albumsMap.has(row.Album)) {
         albumsMap.set(row.Album, {
           name: row.Album,
@@ -71,11 +69,20 @@ async function importData() {
         }));
         albumsMap.set(row.Album, album);
       }
-    }
 
-    // Insert artists
-    for (const artist of artistsSet) {
-      await artistsCollection.insertOne({ name: artist });
+      if (!artistsMap.has(row.Artist)) {
+        artistsMap.set(row.Artist, {
+          name: row.Artist,
+          plays: [...song.plays]
+        });
+      } else {
+        const artist = artistsMap.get(row.Artist);
+        artist.plays = artist.plays.map((play, index) => ({
+          month: play.month,
+          count: play.count + song.plays[index].count
+        }));
+        artistsMap.set(row.Artist, artist);
+      }
     }
 
     // Insert albums
@@ -84,9 +91,14 @@ async function importData() {
       await albumsCollection.insertOne(albumData);
     }
 
+    // Insert artists
+    for (const [artistName, artistData] of artistsMap.entries()) {
+      await artistsCollection.insertOne(artistData);
+    }
+
     console.log(`Imported ${results.length} songs`);
-    console.log(`Imported ${artistsSet.size} artists`);
     console.log(`Imported ${albumsMap.size} albums`);
+    console.log(`Imported ${artistsMap.size} artists`);
 
     console.log("Data import completed");
   } catch (err) {

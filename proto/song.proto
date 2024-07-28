@@ -3,13 +3,13 @@ syntax = "proto3";
 package song;
 
 service SongService {
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
   rpc GetAllSongs (Empty) returns (SongList) {}
   rpc GetSongsByYear (YearRequest) returns (SongList) {}
   rpc GetSongsByArtist (ArtistRequest) returns (SongList) {}
   rpc GetSongsByWriter (WriterRequest) returns (SongList) {}
   rpc GetSongsByAlbum (AlbumRequest) returns (SongList) {}
   rpc GetSongsByMonth (MonthRequest) returns (SongList) {}
-  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
 }
 
 message HealthCheckRequest {}

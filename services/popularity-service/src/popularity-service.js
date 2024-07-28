@@ -204,12 +204,6 @@ const popularityService = {
       const allAlbums = await Album.find();
       console.log(`Found ${allAlbums.length} albums in total`);
 
-      // Log the structure of fetched albums
-      allAlbums.forEach(album => {
-        console.log(`Album Document: ${JSON.stringify(album._doc, null, 2)}`);
-        console.log(`Album Name Direct Access: ${album._doc.name}`);
-      });
-
       // Aggregate play counts across all months for each album
       const albumPlayCounts = allAlbums.map(album => {
         const totalPlayCount = album.plays && album.plays.length > 0
@@ -316,6 +310,59 @@ const popularityService = {
       callback(null, response);
     } catch (error) {
       console.error('Error in GetAlbumPopularity:', error);
+      callback({
+        code: grpc.status.INTERNAL,
+        details: "Internal server error"
+      });
+    }
+  },
+
+  GetMostPopularArtists: async (call, callback) => {
+    const { period, limit = 10, offset = 0 } = call.request;
+    console.log(`Received request with period: "${period}", limit: ${limit}, offset: ${offset}`);
+
+    try {
+      // Fetch all artists
+      const allArtists = await Artist.find();
+      console.log(`Found ${allArtists.length} artists in total`);
+
+      // Aggregate play counts across all months for each album
+      const artistPlayCounts = allArtists.map(artist => {
+        const totalPlayCount = artist.plays && artist.plays.length > 0
+          ? artist.plays.reduce((sum, play) => {
+            console.log(`Processing play for album ${artist._doc.name}: month=${play._doc.month}, count=${play._doc.count}`);
+            return sum + play._doc.count;
+          }, 0)
+          : 0;
+        console.log(`Artist: ${artist._doc.name}, Total Play Count: ${totalPlayCount}`);
+        return {
+          name: artist._doc.name,
+          artist: artist._doc.artist || '',
+          totalPlayCount
+        };
+      });
+
+      // Sort artists by total play count and add rank
+      artistPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
+      artistPlayCounts.forEach((artist, index) => {
+        artist.rank = index + 1;
+      });
+
+      // Paginate the results
+      const paginatedArtists = artistPlayCounts.slice(offset, offset + limit);
+
+      const response = {
+        artists: paginatedArtists.map(artist => ({
+          name: artist.name,
+          play_count: artist.totalPlayCount,
+          rank: artist.rank
+        })),
+        total_count: allArtists.length
+      };
+
+      callback(null, response);
+    } catch (error) {
+      console.error('Error in GetMostPopularArtists:', error);
       callback({
         code: grpc.status.INTERNAL,
         details: "Internal server error"

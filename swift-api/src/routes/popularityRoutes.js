@@ -116,16 +116,30 @@ router.get('/albums/album', (req, res) => {
   });
 });
 
-// Get popularity over time
-router.get('/over-time', (req, res) => {
-    const { id, type, startDate, endDate } = req.query;
-    client.GetPopularityOverTime({ id, type, start_date: startDate, end_date: endDate }, (err, response) => {
-        if (err) {
-            console.error('Error:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-        res.json(response);
-    });
+// Get most popular artists
+router.get('/artists/most', (req, res) => {
+  const { period = 'all_time', limit = 10, offset = 0 } = req.query;
+  client.GetMostPopularArtists({ period, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
+      if (err) {
+          console.error('Error:', err);
+          return res.status(500).json({ error: 'Internal Server Error' });
+      }
+      res.json(response);
+  });
+});
+
+/* Get overall rankings of artists that match or start with the user's searched name, aggregated across all 
+ * available months in the input dataset.
+ */
+router.get('/artists/artist', (req, res) => {
+  const { name } = req.query;  // Use req.query to get the name parameter
+  client.GetArtistPopularity({ name }, (err, response) => {
+      if (err) {
+          console.error('Error:', err);
+          return res.status(500).json({ error: 'Internal Server Error' });
+      }
+      res.json(response);
+  });
 });
 
 module.exports = router;

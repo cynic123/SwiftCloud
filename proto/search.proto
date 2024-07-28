@@ -3,10 +3,10 @@ syntax = "proto3";
 package search;
 
 service SearchService {
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
   rpc Search (SearchRequest) returns (SearchResponse) {}
   rpc AdvancedSearch (AdvancedSearchRequest) returns (SearchResponse) {}
   rpc Autocomplete (AutocompleteRequest) returns (AutocompleteResponse) {}
-  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
 }
 
 message HealthCheckRequest {}

@@ -3,6 +3,7 @@ syntax = "proto3";
 package trend;
 
 service TrendService {
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
   rpc GetOverallTrends (Empty) returns (OverallTrends) {}
   rpc GetTrendsByPeriod (PeriodRequest) returns (PeriodTrends) {}
   rpc GetTrendingSongs (TrendingSongsRequest) returns (TrendingSongsList) {}
@@ -11,7 +12,6 @@ service TrendService {
   rpc GetSeasonalTrends (SeasonalRequest) returns (SeasonalTrends) {}
   rpc GetArtistTrends (ArtistRequest) returns (ArtistTrends) {}
   rpc GetAlbumTrends (AlbumRequest) returns (AlbumTrends) {}
-  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
 }
 
 message HealthCheckRequest {}

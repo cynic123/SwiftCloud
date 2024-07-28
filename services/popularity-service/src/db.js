@@ -21,7 +21,6 @@ const albumSchema = new mongoose.Schema({
 
 const artistSchema = new mongoose.Schema({
   name: String,
-  genre: String,
   plays: [{
     date: Date,
     count: Number
