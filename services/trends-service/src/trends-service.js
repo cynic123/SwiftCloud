@@ -1,5 +1,6 @@
 const { Song, Album, Artist } = require('./db');
 const moment = require('moment');
+const { Round } = require('../../../utils/commonUtils');
 
 const trendService = {
   HealthCheck: async (call, callback) => {
@@ -68,13 +69,9 @@ const trendService = {
       { $limit: 10 }
     ]);
 
-    const roundToThree = (num) => {
-      return Number(Math.round(num + 'e3') + 'e-3');
-    };
-
     const result = {
-      total_plays: roundToThree(totalPlays),
-      average_plays_per_song: roundToThree(totalPlays / songCount),
+      total_plays: totalPlays,
+      average_plays_per_song: Round((totalPlays / songCount), 3),
       top_artists: topArtists.map(artist => {
         const months = artist.monthlyData.map(d => d.month).sort();
         const firstMonthPlays = artist.monthlyData.find(d => d.month === months[0]).plays;
@@ -105,8 +102,8 @@ const trendService = {
 
             return {
               title: data.title,
-              plays: roundToThree(totalPlays),
-              growth_rate_per_month: roundToThree(songGrowthRate)
+              plays: Round(totalPlays, 3),
+              growth_rate_per_month: Round(songGrowthRate, 3)
             };
           })
           .sort((a, b) => b.plays - a.plays)
@@ -114,9 +111,9 @@ const trendService = {
 
         return {
           name: artist.name,
-          total_plays: roundToThree(artist.total_plays),
-          average_plays_per_song: roundToThree(artist.total_plays / artist.monthlyData.reduce((sum, month) => sum + month.songs.length, 0)),
-          growth_rate_per_month: roundToThree(growthRatePerMonth),
+          total_plays: Round(artist.total_plays, 3),
+          average_plays_per_song: Round((artist.total_plays / artist.monthlyData.reduce((sum, month) => sum + month.songs.length, 0)), 3),
+          growth_rate_per_month: Round(growthRatePerMonth, 3),
           top_songs: topSongs
         };
       })

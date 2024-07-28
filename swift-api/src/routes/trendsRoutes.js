@@ -2,6 +2,7 @@ const express = require('express');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
+const { Round } = require('../../../utils/commonUtils');
 
 const router = express.Router();
 
@@ -19,10 +20,6 @@ const trendProto = grpc.loadPackageDefinition(packageDefinition).trend;
 
 const client = new trendProto.TrendService('localhost:3004', grpc.credentials.createInsecure());
 
-const roundToThree = (num) => {
-  return Number(Math.round(num + 'e3') + 'e-3');
-};
-
 // Health Check
 router.get('/health', (req, res) => {
 	client.HealthCheck({}, (err, response) => {
@@ -34,7 +31,7 @@ router.get('/health', (req, res) => {
 	});
 });
 
-// Get overall trends
+// Get overall trends (top 10 artists with their top 10 songs)
 router.get('/overall', (req, res) => {
 	client.GetOverallTrends({}, (err, response) => {
 		if (err) {
@@ -44,16 +41,16 @@ router.get('/overall', (req, res) => {
 
 		const roundedResponse = {
 			total_plays: response.total_plays,
-			average_plays_per_song: roundToThree(response.average_plays_per_song),
+			average_plays_per_song: Round(response.average_plays_per_song, 3),
 			top_artists: response.top_artists.map(artist => ({
 				name: artist.name,
 				total_plays: artist.total_plays,
-				average_plays_per_song: roundToThree(artist.average_plays_per_song),
-				growth_rate_per_month: roundToThree(artist.growth_rate_per_month),
+				average_plays_per_song: Round(artist.average_plays_per_song, 3),
+				growth_rate_per_month: Round(artist.growth_rate_per_month, 3),
 				top_songs: artist.top_songs.map(song => ({
 					title: song.title,
 					plays: song.plays,
-					growth_rate_per_month: roundToThree(song.growth_rate_per_month)
+					growth_rate_per_month: Round(song.growth_rate_per_month, 3)
 				}))
 			}))
 		};
@@ -62,7 +59,7 @@ router.get('/overall', (req, res) => {
 	});
 });
 
-// Get trends for a specific time period
+// Get trends for a specific time period (top 10 artists with their top top 10 songs)
 router.get('/period', (req, res) => {
 	const { startDate, endDate } = req.query;
 	client.GetTrendsByPeriod({ startDate, endDate }, (err, response) => {
