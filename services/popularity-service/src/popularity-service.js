@@ -368,6 +368,70 @@ const popularityService = {
         details: "Internal server error"
       });
     }
+  },
+
+  GetArtistPopularity: async (call, callback) => {
+    const { name } = call.request;
+    console.log(`Received name query: "${name}"`);
+
+    try {
+      // Find artists that match the name query
+      const matchingArtists = await Artist.find({
+        name: { $regex: name, $options: 'i' }  // Changed to match any occurrence of the name
+      });  
+
+      console.log(`Found ${matchingArtists.length} artists matching the query`);
+      console.log('Matching artists:', matchingArtists.map(a => a._doc.name));
+
+      if (matchingArtists.length === 0) {
+        console.log('No artists found, returning NOT_FOUND error');
+        return callback({
+          code: grpc.status.NOT_FOUND,
+          details: "No albums found"
+        });
+      }
+
+      // Fetch all artists
+      const allArtists = await Artist.find();
+
+      console.log(`Found ${allArtists.length} artists in total`);
+
+      // Aggregate play counts across all months for each artist
+      const artistPlayCounts = allArtists.map(artist => {
+        const totalPlayCount = artist.plays ? artist.plays.reduce((sum, play) => sum + play._doc.count, 0) : 0;
+        return {
+          name: artist._doc.name,
+          totalPlayCount
+        };
+      });
+
+      // Sort artists by total play count and add rank
+      artistPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
+      artistPlayCounts.forEach((artist, index) => {
+        artist.rank = index + 1;
+      });
+
+      // Filter the artist play counts to include only the matching artists
+      const filteredArtistPlayCounts = artistPlayCounts.filter(album =>
+        matchingArtists.some(ma => ma._doc.name === album.name)
+      );
+
+      const response = {
+        rankings: filteredArtistPlayCounts.map(artist => ({
+          name: artist.name,
+          play_count: artist.totalPlayCount,
+          rank: artist.rank
+        }))
+      };
+
+      callback(null, response);
+    } catch (error) {
+      console.error('Error in GetAlbumPopularity:', error);
+      callback({
+        code: grpc.status.INTERNAL,
+        details: "Internal server error"
+      });
+    }
   }
 };
 
