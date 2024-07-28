@@ -220,10 +220,8 @@ GetTrendsByPeriod: async (call, callback) => {
         }
       },
       { $sort: { total_plays: -1 } },
-      { $limit: 5 }
+      { $limit: 10 }
     ]);
-
-    console.log(`Top artists: ${JSON.stringify(topArtists)}`);
 
     const result = {
       start_month,
@@ -265,7 +263,7 @@ GetTrendsByPeriod: async (call, callback) => {
             };
           })
           .sort((a, b) => b.plays - a.plays)
-          .slice(0, 5);
+          .slice(0, 10);
 
         return {
           name: artist.name,
