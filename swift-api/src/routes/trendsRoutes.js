@@ -62,6 +62,12 @@ router.get('/overall', (req, res) => {
 // Get trends for a specific period of months (top 10 artists with their top top 10 songs)
 router.get('/period', (req, res) => {
 	const { start_month, end_month } = req.query;
+
+	// Validation
+  if (!start_month || !end_month) {
+    return res.status(400).json({ error: 'Start month and end month must be provided' });
+  }
+	
 	client.GetTrendsByPeriod({ start_month, end_month }, (err, response) => {
 			if (err) {
 					console.error('Error:', err);
@@ -90,8 +96,8 @@ router.get('/period', (req, res) => {
 
 // Get trending songs
 router.get('/songs', (req, res) => {
-	const { limit = 10 } = req.query;
-	client.GetTrendingSongs({ limit: parseInt(limit) }, (err, response) => {
+	const { months } = req.query;
+	client.GetTrendingSongs({ months }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);
 			return res.status(500).json({ error: 'Internal Server Error' });

@@ -83,3 +83,5 @@ swift-api:     internalRepr: Map(2) { 'content-type' => [Array], 'date' => [Arra
 swift-api:     options: {}
 swift-api:   }
 swift-api: }
+
+//TODO: Search service advamced search requires input validation and fix for all time query.

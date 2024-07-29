@@ -27,7 +27,7 @@ message PeriodRequest {
 }
 
 message TrendingSongsRequest {
-  int32 limit = 1;
+  int32 months = 1;
 }
 
 message CompareRequest {

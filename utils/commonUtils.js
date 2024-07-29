@@ -1,3 +1,9 @@
+const monthMap = {
+  "january": 0, "february": 1, "march": 2, "april": 3,
+  "may": 4, "june": 5, "july": 6, "august": 7,
+  "aeptember": 8, "october": 9, "november": 10, "december": 11
+};
+
 module.exports = {
   /**
    * Rounds the given number upto the given decimal places.
@@ -21,11 +27,7 @@ module.exports = {
    * @returns 
    */
   MonthToNumber: (month) => {
-    const monthMap = {
-      "January": 0, "February": 1, "March": 2, "April": 3,
-      "May": 4, "June": 5, "July": 6, "August": 7,
-      "September": 8, "October": 9, "November": 10, "December": 11
-    };
-    return monthMap[month];
+    if (!month) throw new Error('Month argument null.'); 
+    return monthMap[month.toLowerCase()];
   }
 }

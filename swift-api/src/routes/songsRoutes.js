@@ -43,6 +43,13 @@ router.get('/', (req, res) => {
 
 router.get('/year/:year', (req, res) => {
     const year = parseInt(req.params.year);
+    console.log(`Received request with year: "${year}"`);
+
+    // Validation
+	if (!year) {
+		return res.status(400).json({ error: 'year parameter is required' });
+	}
+
     client.GetSongsByYear({ year }, (err, response) => {
         if (err) {
             console.error('Error:', err);
@@ -54,6 +61,12 @@ router.get('/year/:year', (req, res) => {
 
 router.get('/artist/:artist', (req, res) => {
     const artist = req.params.artist;
+    console.log(`Received request with artist: "${artist}"`);
+
+    // Validation
+	if (!artist) {
+		return res.status(400).json({ error: 'artist parameter is required' });
+	}
     client.GetSongsByArtist({ artist }, (err, response) => {
         if (err) {
             console.error('Error:', err);
@@ -65,6 +78,12 @@ router.get('/artist/:artist', (req, res) => {
 
 router.get('/writer/:writer', (req, res) => {
     const writer = req.params.writer;
+    console.log(`Received request with writer: "${writer}"`);
+
+    // Validation
+	if (!writer) {
+		return res.status(400).json({ error: 'writer parameter is required' });
+	}
     client.GetSongsByWriter({ writer }, (err, response) => {
         if (err) {
             console.error('Error:', err);
@@ -76,6 +95,13 @@ router.get('/writer/:writer', (req, res) => {
 
 router.get('/album/:album', (req, res) => {
     const album = req.params.album;
+    console.log(`Received request with album: "${album}"`);
+
+    // Validation
+	if (!album) {
+		return res.status(400).json({ error: 'album parameter is required' });
+	}
+
     client.GetSongsByAlbum({ album }, (err, response) => {
         if (err) {
             console.error('Error:', err);
@@ -87,6 +113,13 @@ router.get('/album/:album', (req, res) => {
 
 router.get('/month/:month', (req, res) => {
     const month = req.params.month;
+    console.log(`Received request with month: "${month}"`);
+
+    // Validation
+	if (!month) {
+		return res.status(400).json({ error: 'month parameter is required' });
+	}
+
     client.GetSongsByMonth({ month }, (err, response) => {
         if (err) {
             console.error('Error:', err);
