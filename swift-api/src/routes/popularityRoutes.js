@@ -37,13 +37,16 @@ router.get('/songs/most', (req, res) => {
 
 	// Validation
 	if (!period)
-		return res.status(400).json({ error: 'Period parameter is required' });
+		return res.status(400).json({ error: 'period parameter is required' });
+
+	if(!(period === 'monthly' || period === 'all_time'))
+		return res.status(400).json({ error: 'period should be either monthly or all_time' });
 
 	if (limit && isNaN(limit))
-		return res.status(400).json({ error: 'Limit parameter must be a number' });
+		return res.status(400).json({ error: 'limit parameter must be a number' });
 
 	if (offset && isNaN(offset))
-		return res.status(400).json({ error: 'Offset parameter must be a number' });
+		return res.status(400).json({ error: 'offset parameter must be a number' });
 
 	client.GetMostPopularSongs({ period, limit, offset }, (err, response) => {
 		if (err) {
@@ -105,13 +108,16 @@ router.get('/albums/most', (req, res) => {
 
 	// Validation
 	if (!period)
-		return res.status(400).json({ error: 'Period parameter is required' });
+		return res.status(400).json({ error: 'period parameter is required' });
+
+	if(!(period === 'monthly' || period === 'all_time'))
+		return res.status(400).json({ error: 'period should be either monthly or all_time' });
 
 	if (limit && isNaN(limit))
-		return res.status(400).json({ error: 'Limit parameter must be a number' });
+		return res.status(400).json({ error: 'limit parameter must be a number' });
 
 	if (offset && isNaN(offset))
-		return res.status(400).json({ error: 'Offset parameter must be a number' });
+		return res.status(400).json({ error: 'offset parameter must be a number' });
 
 	client.GetMostPopularAlbums({ period, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
 		if (err) {

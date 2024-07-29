@@ -38,13 +38,13 @@ router.post('/', (req, res) => {
 
 	// Validation
 	if (!query)
-		return res.status(400).json({ error: 'Period parameter is required' });
+		return res.status(400).json({ error: 'query parameter is required' });
 
 	if (limit && isNaN(limit))
-		return res.status(400).json({ error: 'Limit parameter must be a number' });
+		return res.status(400).json({ error: 'limit parameter must be a number' });
 
 	if (offset && isNaN(offset))
-		return res.status(400).json({ error: 'Offset parameter must be a number' });
+		return res.status(400).json({ error: 'offset parameter must be a number' });
 
 	client.Search({ query, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
 		if (err) {
