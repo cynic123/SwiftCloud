@@ -69,6 +69,12 @@ router.get('/period', (req, res) => {
 	if (!start_month || !end_month)
 		return res.status(400).json({ error: 'start month and end month must be provided' });
 
+	if (isNaN(start_month) || isNaN(end_month))
+		return res.status(400).json({ error: 'start month and end month must be number : 1 (Jan) - 12 (Dec)' });
+
+	if (start_month < 1 || end_month > 12)
+		return res.status(400).json({ error: 'invalid start_date or end_date' });
+
 	client.GetTrendsByPeriod({ start_month, end_month }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);
