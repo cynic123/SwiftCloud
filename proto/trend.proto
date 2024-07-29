@@ -8,6 +8,7 @@ service TrendService {
   rpc GetTrendsByPeriod (PeriodRequest) returns (PeriodTrends) {}
   rpc GetTrendingSongs (TrendingSongsRequest) returns (TrendingSongsList) {}
   rpc GetTrendingArtists (TrendingArtistsRequest) returns (TrendingArtistsList) {}
+  rpc GetTrendingAlbums (TrendingAlbumsRequest) returns (TrendingAlbumsList) {}
 }
 
 message HealthCheckRequest {}
@@ -28,6 +29,10 @@ message TrendingSongsRequest {
 }
 
 message TrendingArtistsRequest {
+  int32 months = 1;
+}
+
+message TrendingAlbumsRequest {
   int32 months = 1;
 }
 
@@ -62,6 +67,17 @@ message TrendingArtist {
 
 message TrendingArtistsList {
   repeated TrendingArtist artists = 1;
+}
+
+message TrendingAlbum {
+  string name = 1;
+  string artist = 2;
+  int32 total_plays = 3;
+  float growth_rate_per_month = 4;
+}
+
+message TrendingAlbumsList {
+  repeated TrendingAlbum albums = 1;
 }
 
 message ArtistTrend {

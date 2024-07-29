@@ -339,7 +339,7 @@ const trendService = {
             }
           }
         },
-        { $sort: { growthRate: -1 } },
+        { $sort: { totalPlays: -1 } },
         { $limit: 10 } // Ensure we only get the top 10 songs
       ]);
 
@@ -406,7 +406,7 @@ const trendService = {
             }
           }
         },
-        { $sort: { growthRate: -1 } },
+        { $sort: { totalPlays: -1 } },
         { $limit: 10 } // Ensure we only get the top 10 artists
       ]);
   
@@ -419,6 +419,83 @@ const trendService = {
       callback(null, { artists: roundedTrendingArtists });
     } catch (error) {
       console.error('Error in GetTrendingArtists:', error);
+      callback({
+        code: grpc.status.INTERNAL,
+        details: "Internal server error"
+      });
+    }
+  },
+  
+  GetTrendingAlbums: async (call, callback) => {
+    const { months } = call.request;
+  
+    if (months > 12 || months < 1) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        details: "Months parameter must be between 1 and 12"
+      });
+    }
+  
+    try {
+      const currentMonth = moment().month();
+      const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - 1 - i).format('MMMM'));
+  
+      const trendingAlbums = await Album.aggregate([
+        { $unwind: '$plays' },
+        { $match: { 'plays.month': { $in: monthsToInclude } } },
+        {
+          $group: {
+            _id: '$name',
+            artist: { $first: '$artist' },
+            monthlyPlays: { $push: { month: '$plays.month', count: '$plays.count' } },
+            totalPlays: { $sum: '$plays.count' }
+          }
+        },
+        {
+          $project: {
+            name: '$_id',
+            artist: 1,
+            totalPlays: 1,
+            monthlyPlays: 1,
+            growthRate: {
+              $cond: [
+                { $gt: [{ $size: '$monthlyPlays' }, 1] },
+                {
+                  $divide: [
+                    {
+                      $subtract: [
+                        { $arrayElemAt: ['$monthlyPlays.count', -1] },
+                        { $arrayElemAt: ['$monthlyPlays.count', 0] }
+                      ]
+                    },
+                    {
+                      $cond: [
+                        { $eq: [{ $arrayElemAt: ['$monthlyPlays.count', 0] }, 0] },
+                        1, // Avoid division by zero
+                        { $arrayElemAt: ['$monthlyPlays.count', 0] }
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            }
+          }
+        },
+        { $sort: { totalPlays: -1 } },
+        { $limit: 10 } // Ensure we only get the top 10 albums
+      ]);
+  
+      const roundedTrendingAlbums = trendingAlbums.map(album => ({
+        name: album.name,
+        artist: album.artist,
+        total_plays: album.totalPlays,
+        growth_rate_per_month: Round(album.growthRate, 3)
+      }));
+  
+      callback(null, { albums: roundedTrendingAlbums });
+    } catch (error) {
+      console.error('Error in GetTrendingAlbums:', error);
       callback({
         code: grpc.status.INTERNAL,
         details: "Internal server error"
