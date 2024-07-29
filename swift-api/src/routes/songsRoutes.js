@@ -65,6 +65,7 @@ router.get('/artist/:artist', (req, res) => {
 	// Validation
 	if (!artist)
 		return res.status(400).json({ error: 'artist parameter is required' });
+	
 	client.GetSongsByArtist({ artist }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);

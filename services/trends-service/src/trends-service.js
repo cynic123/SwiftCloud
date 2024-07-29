@@ -296,9 +296,17 @@ const trendService = {
 
   GetTrendingSongs: async (call, callback) => {
     const { months } = call.request;
+
+    if (months > 12 || months < 1) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        details: "Months parameter must be between 1 and 12"
+      });
+    }
+
     try {
       const currentMonth = moment().month();
-      const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - i).format('MMMM'));
+      const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - 1 - i).format('MMMM'));
 
       const trendingSongs = await Song.aggregate([
         { $unwind: '$plays' },
@@ -360,8 +368,7 @@ const trendService = {
         details: "Internal server error"
       });
     }
-  }
-  ,
+  },
 
   CompareTrends: async (call, callback) => {
     const { entityType, entityId1, entityId2, startDate, endDate } = call.request;
