@@ -7,10 +7,6 @@ service TrendService {
   rpc GetOverallTrends (Empty) returns (OverallTrends) {}
   rpc GetTrendsByPeriod (PeriodRequest) returns (PeriodTrends) {}
   rpc GetTrendingSongs (TrendingSongsRequest) returns (TrendingSongsList) {}
-  rpc CompareTrends (CompareRequest) returns (ComparisonResult) {}
-  rpc GetArtistTrends (ArtistRequest) returns (ArtistTrends) {}
-  rpc GetAlbumTrends (AlbumRequest) returns (AlbumTrends) {}
-  rpc GetSeasonalTrends (SeasonalRequest) returns (SeasonalTrends) {}
 }
 
 message HealthCheckRequest {}
@@ -28,30 +24,6 @@ message PeriodRequest {
 
 message TrendingSongsRequest {
   int32 months = 1;
-}
-
-message CompareRequest {
-  string entity_type = 1; // "artist", "album", or "song"
-  string entity_id_1 = 2;
-  string entity_id_2 = 3;
-  string start_date = 4;
-  string end_date = 5;
-}
-
-message SeasonalRequest {
-  int32 year = 1;
-}
-
-message ArtistRequest {
-  string artist_id = 1;
-  string start_date = 2;
-  string end_date = 3;
-}
-
-message AlbumRequest {
-  string album_id = 1;
-  string start_date = 2;
-  string end_date = 3;
 }
 
 message OverallTrends {
@@ -77,31 +49,6 @@ message TrendingSongsList {
   repeated TrendingSong songs = 1;
 }
 
-message ComparisonResult {
-  string entity_type = 1;
-  EntityTrend entity_1 = 2;
-  EntityTrend entity_2 = 3;
-}
-
-message EntityTrend {
-  string id = 1;
-  string name = 2;
-  int32 total_plays = 3;
-  float average_daily_plays = 4;
-  float growth_rate = 5;
-}
-
-message SeasonalTrends {
-  int32 year = 1;
-  repeated SeasonTrend seasons = 2;
-}
-
-message SeasonTrend {
-  string season = 1;
-  int32 total_plays = 2;
-  repeated TrendingSong top_songs = 3;
-}
-
 message ArtistTrend {
   string name = 1;
   int32 total_plays = 2;
@@ -112,21 +59,6 @@ message ArtistTrend {
 
 message ArtistTrends {
   ArtistTrend artist = 1;
-  repeated MonthlyTrend monthly_trends = 2;
-}
-
-message AlbumTrend {
-  string id = 1;
-  string name = 2;
-  string artist = 3;
-  int32 total_plays = 4;
-  float average_plays_per_song = 5;
-  float growth_rate_per_month = 6;
-  repeated TrendingSong top_songs = 7;
-}
-
-message AlbumTrends {
-  AlbumTrend album = 1;
   repeated MonthlyTrend monthly_trends = 2;
 }
 

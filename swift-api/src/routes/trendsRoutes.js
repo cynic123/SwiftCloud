@@ -117,28 +117,4 @@ router.get('/songs', (req, res) => {
 	});
 });
 
-// Get trend comparison between two artists
-router.get('/compare', (req, res) => {
-	const { artist1, artist2 } = req.query;
-	client.CompareTrends({ artist1, artist2 }, (err, response) => {
-		if (err) {
-			console.error('Error:', err);
-			return res.status(500).json({ error: 'Internal Server Error' });
-		}
-		res.json(response);
-	});
-});
-
-// Get seasonal trends
-router.get('/seasonal', (req, res) => {
-	const { year } = req.query;
-	client.GetSeasonalTrends({ year: parseInt(year) }, (err, response) => {
-		if (err) {
-			console.error('Error:', err);
-			return res.status(500).json({ error: 'Internal Server Error' });
-		}
-		res.json(response.seasonalTrends);
-	});
-});
-
 module.exports = router;
