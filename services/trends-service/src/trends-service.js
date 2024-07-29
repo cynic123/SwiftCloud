@@ -133,8 +133,6 @@ const trendService = {
   GetTrendsByPeriod: async (call, callback) => {
     const { start_month, end_month } = call.request;
     try {
-      console.log(`Received request with start_month: ${start_month}, end_month: ${end_month}`);
-
       const startMonthNumber = MonthToNumber(start_month);
       const endMonthNumber = MonthToNumber(end_month);
 
@@ -296,14 +294,6 @@ const trendService = {
 
   GetTrendingSongs: async (call, callback) => {
     const { months } = call.request;
-
-    if (months > 12 || months < 1) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        details: "Months parameter must be between 1 and 12"
-      });
-    }
-
     try {
       const currentMonth = moment().month();
       const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - 1 - i).format('MMMM'));
@@ -356,7 +346,7 @@ const trendService = {
       const roundedTrendingSongs = trendingSongs.map(song => ({
         title: song.title,
         artist: song.artist,
-        plays: song.totalPlays,
+        total_plays: song.totalPlays,
         growth_rate_per_month: Round(song.growthRate, 3)
       }));
 
@@ -369,6 +359,72 @@ const trendService = {
       });
     }
   },
+
+  GetTrendingArtists: async (call, callback) => {
+    const { months } = call.request; 
+    try {
+      const currentMonth = moment().month();
+      const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - 1 - i).format('MMMM'));
+  
+      const trendingArtists = await Artist.aggregate([
+        { $unwind: '$plays' },
+        { $match: { 'plays.month': { $in: monthsToInclude } } },
+        {
+          $group: {
+            _id: '$name',
+            monthlyPlays: { $push: { month: '$plays.month', count: '$plays.count' } },
+            totalPlays: { $sum: '$plays.count' }
+          }
+        },
+        {
+          $project: {
+            name: '$_id',
+            totalPlays: 1,
+            monthlyPlays: 1,
+            growthRate: {
+              $cond: [
+                { $gt: [{ $size: '$monthlyPlays' }, 1] },
+                {
+                  $divide: [
+                    {
+                      $subtract: [
+                        { $arrayElemAt: ['$monthlyPlays.count', -1] },
+                        { $arrayElemAt: ['$monthlyPlays.count', 0] }
+                      ]
+                    },
+                    {
+                      $cond: [
+                        { $eq: [{ $arrayElemAt: ['$monthlyPlays.count', 0] }, 0] },
+                        1, // Avoid division by zero
+                        { $arrayElemAt: ['$monthlyPlays.count', 0] }
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            }
+          }
+        },
+        { $sort: { growthRate: -1 } },
+        { $limit: 10 } // Ensure we only get the top 10 artists
+      ]);
+  
+      const roundedTrendingArtists = trendingArtists.map(artist => ({
+        name: artist.name,
+        total_plays: artist.totalPlays,
+        growth_rate_per_month: Round(artist.growthRate, 3)
+      }));
+  
+      callback(null, { artists: roundedTrendingArtists });
+    } catch (error) {
+      console.error('Error in GetTrendingArtists:', error);
+      callback({
+        code: grpc.status.INTERNAL,
+        details: "Internal server error"
+      });
+    }
+  }  
 };
 
 module.exports = trendService;

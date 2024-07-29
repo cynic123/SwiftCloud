@@ -95,7 +95,7 @@ router.get('/period', (req, res) => {
 	});
 });
 
-// Get trending songs
+// Get trending songs of the last n month(s) requested by user
 router.get('/songs', (req, res) => {
 	const { months } = req.query;
 	console.log(`Received request with months: "${months}"`);
@@ -107,6 +107,8 @@ router.get('/songs', (req, res) => {
 	if (months && isNaN(months))
 		return res.status(400).json({ error: 'months parameter must be number' });
 
+	if (months < 1 || months > 12)
+    return res.status(400).json({ error: 'Months parameter must be a number between 1 and 12' });
 
 	client.GetTrendingSongs({ months }, (err, response) => {
 		if (err) {
@@ -115,6 +117,30 @@ router.get('/songs', (req, res) => {
 		}
 		res.json(response.songs);
 	});
+});
+
+// Get trending artists of the last n month(s) requested by user
+router.get('/artists', (req, res) => {
+  const { months } = req.query;
+	console.log(`Received request with months: "${months}"`);
+
+  // Validation
+  if (!months)
+    return res.status(400).json({ error: 'months parameter is required' });
+
+	if (isNaN(months))
+		return res.status(400).json({ error: 'months parameter must be number' });
+
+  if (months < 1 || months > 12)
+    return res.status(400).json({ error: 'Months parameter must be a number between 1 and 12' });
+
+  client.GetTrendingArtists({ months }, (err, response) => {
+    if (err) {
+      console.error('Error:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+    res.json(response.artists);
+  });
 });
 
 module.exports = router;
