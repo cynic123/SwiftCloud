@@ -18,6 +18,7 @@ const popularityService = {
   GetMostPopularSongs: async (call, callback) => {
     const { period, limit, offset } = call.request;
     console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
+
     try {
       let aggregationPipeline;
 
@@ -208,11 +209,9 @@ const popularityService = {
       const albumPlayCounts = allAlbums.map(album => {
         const totalPlayCount = album.plays && album.plays.length > 0
           ? album.plays.reduce((sum, play) => {
-            console.log(`Processing play for album ${album._doc.name}: month=${play._doc.month}, count=${play._doc.count}`);
             return sum + play._doc.count;
           }, 0)
           : 0;
-        console.log(`Album: ${album._doc.name}, Total Play Count: ${totalPlayCount}`);
         return {
           name: album._doc.name,
           artist: album._doc.artist || '',
@@ -330,11 +329,9 @@ const popularityService = {
       const artistPlayCounts = allArtists.map(artist => {
         const totalPlayCount = artist.plays && artist.plays.length > 0
           ? artist.plays.reduce((sum, play) => {
-            console.log(`Processing play for album ${artist._doc.name}: month=${play._doc.month}, count=${play._doc.count}`);
             return sum + play._doc.count;
           }, 0)
           : 0;
-        console.log(`Artist: ${artist._doc.name}, Total Play Count: ${totalPlayCount}`);
         return {
           name: artist._doc.name,
           artist: artist._doc.artist || '',
