@@ -32,23 +32,20 @@ router.get('/health', (req, res) => {
 
 // Get most popular songs
 router.get('/songs/most', (req, res) => {
-	const { period = 'monthly', limit = 5, offset = 0 } = req.query;
+	const { period, limit = 10, offset = 0 } = req.query;
 	console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
 
 	// Validation
-	if (!period) {
+	if (!period)
 		return res.status(400).json({ error: 'Period parameter is required' });
-	}
 
-	if (limit && isNaN(limit)) {
+	if (limit && isNaN(limit))
 		return res.status(400).json({ error: 'Limit parameter must be a number' });
-	}
 
-	if (offset && isNaN(offset)) {
+	if (offset && isNaN(offset))
 		return res.status(400).json({ error: 'Offset parameter must be a number' });
-	}
 
-	client.GetMostPopularSongs({ period, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
+	client.GetMostPopularSongs({ period, limit, offset }, (err, response) => {
 		if (err) {
 			console.error('gRPC error:', err);
 			return res.status(500).json({ error: err.message || 'Internal Server Error' });
@@ -67,7 +64,7 @@ router.get('/songs/most', (req, res) => {
 			res.json(response.months);
 		} else {
 			if (!response.songs || response.songs.length === 0) {
-				console.error('Received empty all-time response from gRPC service');
+				console.error('Received empty response from gRPC service');
 				return res.status(404).json({ error: 'No data found' });
 			}
 			res.json(response.songs);
@@ -83,9 +80,8 @@ router.get('/songs/song', (req, res) => {
 	console.log(`Received request with title: "${title}"`);
 
 	// Validation
-	if (!title) {
+	if (!title)
 		return res.status(400).json({ error: 'Title query is required' });
-	}
 
 	client.GetSongPopularity({ title }, (err, response) => {
 		if (err) {
@@ -104,21 +100,18 @@ router.get('/songs/song', (req, res) => {
 
 // Get most popular albums
 router.get('/albums/most', (req, res) => {
-	const { period = 'all_time', limit = 10, offset = 0 } = req.query;
+	const { period, limit = 10, offset = 0 } = req.query;
 	console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
 
 	// Validation
-	if (!period) {
+	if (!period)
 		return res.status(400).json({ error: 'Period parameter is required' });
-	}
 
-	if (limit && isNaN(limit)) {
+	if (limit && isNaN(limit))
 		return res.status(400).json({ error: 'Limit parameter must be a number' });
-	}
 
-	if (offset && isNaN(offset)) {
+	if (offset && isNaN(offset))
 		return res.status(400).json({ error: 'Offset parameter must be a number' });
-	}
 
 	client.GetMostPopularAlbums({ period, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
 		if (err) {
@@ -137,9 +130,8 @@ router.get('/albums/album', (req, res) => {
 	console.log(`Received request with name: "${name}"`);
 
 	// Validation
-	if (!name) {
+	if (!name)
 		return res.status(400).json({ error: 'name parameter is required' });
-	}
 
 	client.GetAlbumPopularity({ name }, (err, response) => {
 		if (err) {
@@ -152,21 +144,18 @@ router.get('/albums/album', (req, res) => {
 
 // Get most popular artists
 router.get('/artists/most', (req, res) => {
-	const { period = 'all_time', limit = 10, offset = 0 } = req.query;
+	const { period, limit = 10, offset = 0 } = req.query;
 	console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
 
 	// Validation
-	if (!period) {
+	if (!period)
 		return res.status(400).json({ error: 'Period parameter is required' });
-	}
 
-	if (limit && isNaN(limit)) {
+	if (limit && isNaN(limit))
 		return res.status(400).json({ error: 'Limit parameter must be a number' });
-	}
 
-	if (offset && isNaN(offset)) {
+	if (offset && isNaN(offset))
 		return res.status(400).json({ error: 'Offset parameter must be a number' });
-	}
 
 	client.GetMostPopularArtists({ period, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
 		if (err) {
@@ -185,10 +174,9 @@ router.get('/artists/artist', (req, res) => {
 	console.log(`Received request with name: "${name}"`);
 
 	// Validation
-	if (!name) {
+	if (!name)
 		return res.status(400).json({ error: 'name parameter is required' });
-	}
-	
+
 	client.GetArtistPopularity({ name }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);

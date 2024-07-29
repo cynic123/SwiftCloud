@@ -1,5 +1,6 @@
 const { Song, Album, Artist } = require('./db');
 const grpc = require('@grpc/grpc-js');
+const moment = require('moment');
 const { Round, MonthToNumber } = require('../../../utils/commonUtils');
 
 const trendService = {
@@ -295,63 +296,48 @@ const trendService = {
 
   GetTrendingSongs: async (call, callback) => {
     const { months } = call.request;
-
-    if (months > 12 || months < 1) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        details: "Months parameter must be between 1 and 12"
-      });
-    }
-
     try {
-      const allMonths = await Song.aggregate([
-        { $unwind: '$plays' },
-        { $group: { _id: '$plays.month' } },
-        { $sort: { _id: -1 } },
-        { $limit: months }
-      ]);
-
-      const latestMonths = allMonths.map(month => month._id);
+      const currentMonth = moment().month();
+      const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - i).format('MMMM'));
 
       const trendingSongs = await Song.aggregate([
         { $unwind: '$plays' },
-        { $match: { 'plays.month': { $in: latestMonths } } },
+        { $match: { 'plays.month': { $in: monthsToInclude } } },
         {
           $group: {
-            _id: '$_id',
-            title: { $first: '$title' },
-            artist: { $first: '$artist' },
+            _id: { title: '$title', artist: '$artist' },
             monthlyPlays: { $push: { month: '$plays.month', count: '$plays.count' } },
             totalPlays: { $sum: '$plays.count' }
           }
         },
         {
           $project: {
-            title: 1,
-            artist: 1,
+            title: '$_id.title',
+            artist: '$_id.artist',
             totalPlays: 1,
+            monthlyPlays: 1,
             growthRate: {
-              $cond: {
-                if: { $gt: [{ $size: '$monthlyPlays' }, 1] },
-                then: {
-                  $cond: {
-                    if: { $eq: [{ $arrayElemAt: ['$monthlyPlays.count', 0] }, 0] },
-                    then: 0,
-                    else: {
-                      $divide: [
-                        {
-                          $subtract: [
-                            { $arrayElemAt: ['$monthlyPlays.count', -1] },
-                            { $arrayElemAt: ['$monthlyPlays.count', 0] }
-                          ]
-                        },
+              $cond: [
+                { $gt: [{ $size: '$monthlyPlays' }, 1] },
+                {
+                  $divide: [
+                    {
+                      $subtract: [
+                        { $arrayElemAt: ['$monthlyPlays.count', -1] },
+                        { $arrayElemAt: ['$monthlyPlays.count', 0] }
+                      ]
+                    },
+                    {
+                      $cond: [
+                        { $eq: [{ $arrayElemAt: ['$monthlyPlays.count', 0] }, 0] },
+                        1, // Avoid division by zero
                         { $arrayElemAt: ['$monthlyPlays.count', 0] }
                       ]
                     }
-                  }
+                  ]
                 },
-                else: 0
-              }
+                0
+              ]
             }
           }
         },
@@ -374,7 +360,8 @@ const trendService = {
         details: "Internal server error"
       });
     }
-  },
+  }
+  ,
 
   CompareTrends: async (call, callback) => {
     const { entityType, entityId1, entityId2, startDate, endDate } = call.request;
