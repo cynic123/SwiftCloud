@@ -1,5 +1,6 @@
 const searchService = require('../src/search-service');
 const { Song } = require('../src/db');
+const { describe } = require('pm2');
 
 // Mock the Song model
 jest.mock('../src/db', () => ({
@@ -25,6 +26,18 @@ jest.mock('@grpc/grpc-js', () => ({
   },
 }));
 
+describe('Health Check', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('HealthCheck returns correct status', async () => {
+    const mockCallback = jest.fn();
+    await searchService.HealthCheck(null, mockCallback);
+    expect(mockCallback).toHaveBeenCalledWith(null, { status: 'Welcome to Search Service!' });
+  });
+})
+
 // Basic Search
 describe('Search Service', () => {
   beforeEach(() => {
@@ -38,12 +51,6 @@ describe('Search Service', () => {
   };
 
   Song.find.mockImplementation(() => mockQueryBuilder);
-
-  test('HealthCheck returns correct status', async () => {
-    const mockCallback = jest.fn();
-    await searchService.HealthCheck(null, mockCallback);
-    expect(mockCallback).toHaveBeenCalledWith(null, { status: 'Welcome to Search Service!' });
-  });
 
   test('successfully retrieves songs based on the search query', async () => {
     const mockSongs = [
