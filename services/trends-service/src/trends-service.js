@@ -1,7 +1,7 @@
 const { Song, Album, Artist } = require('./db');
 const grpc = require('@grpc/grpc-js');
 const moment = require('moment');
-const { Round, MonthToNumber } = require('../../../utils/commonUtils');
+const { Round } = require('../../../utils/commonUtils');
 
 const trendService = {
   HealthCheck: async (call, callback) => {

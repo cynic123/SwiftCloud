@@ -13,7 +13,7 @@ const songService = {
       });
     }
   },
-  
+
   GetAllSongs: async (call, callback) => {
     try {
       const songs = await Song.find();
@@ -59,19 +59,22 @@ const songService = {
     const { writer } = call.request;
     try {
       const songs = await Song.find({ writers: { $regex: new RegExp(writer, 'i') } });
-      callback(null, { songs: songs.map(song => ({
-        id: song._id.toString(),
-        title: song.title,
-        artist: song.artist,
-        writers: song.writers,
-        album: song.album,
-        year: song.year,
-        plays: song.plays
-      }))});
+      callback(null, {
+        songs: songs.map(song => ({
+          id: song._id.toString(),
+          title: song.title,
+          artist: song.artist,
+          writers: song.writers,
+          album: song.album,
+          year: song.year,
+          plays: song.plays
+        }))
+      });
     } catch (err) {
       callback({
-        code: grpc.status.INTERNAL,
-        details: "Error retrieving songs"
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
       });
     }
   },
@@ -94,7 +97,11 @@ const songService = {
     const { month } = call.request;
     try {
       const songs = await Song.find({ 'plays.month': new RegExp(month, 'i') });
-      callback(null, { songs });
+      const filteredSongs = songs.map(song => ({
+        ...song._doc,
+        plays: song.plays.filter(play => new RegExp(month, 'i').test(play.month))
+      }));
+      callback(null, { songs: filteredSongs });
     } catch (err) {
       callback({
         code: 500,

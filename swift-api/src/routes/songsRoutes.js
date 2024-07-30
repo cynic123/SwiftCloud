@@ -42,12 +42,18 @@ router.get('/', (req, res) => {
 });
 
 router.get('/year/:year', (req, res) => {
-	const year = parseInt(req.params.year);
+	const year = req.params.year;
 	console.log(`Received request with year: "${year}"`);
 
 	// Validation
 	if (!year)
 		return res.status(400).json({ error: 'year parameter is required' });
+
+	if (year && isNaN(year))
+		return res.status(400).json({ error: 'year parameter must be a number' });
+
+	if (year < 1900 && year > new Date().getFullYear())
+		return res.status(400).json({ error: 'year parameter must be between 1900 to current year' });
 
 	client.GetSongsByYear({ year }, (err, response) => {
 		if (err) {
@@ -65,7 +71,7 @@ router.get('/artist/:artist', (req, res) => {
 	// Validation
 	if (!artist)
 		return res.status(400).json({ error: 'artist parameter is required' });
-	
+
 	client.GetSongsByArtist({ artist }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);
