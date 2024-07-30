@@ -18,6 +18,7 @@
     "dev:trends-service": "lerna run dev --scope=trends-service --stream",
     "dev:popularity-service": "lerna run dev --scope=popularity-service --stream",
     "test": "lerna run test",
+    "test:coverage": "lerna run test:coverage",
     "test:swift-api": "lerna run test --scope=swift-api",
     "test:songs-service": "lerna run test --scope=songs-service",
     "test:search-service": "lerna run test --scope=search-service",
