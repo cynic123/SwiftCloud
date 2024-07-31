@@ -172,6 +172,7 @@ const trendService = {
 
       const totalPlays = totalPlaysResult.length > 0 ? totalPlaysResult[0].totalPlays : 0;
       const songCount = await Song.countDocuments();
+      const averagePlaysPerSong = songCount > 0 ? Round((totalPlays / songCount), 3) : 0;
 
       const topArtists = await Artist.aggregate([
         {
@@ -238,7 +239,7 @@ const trendService = {
         start_month,
         end_month,
         total_plays: Round(totalPlays, 3),
-        average_plays_per_song: Round((totalPlays / songCount), 3),
+        average_plays_per_song: averagePlaysPerSong,
         top_artists: topArtists.map(artist => {
           const months = artist.monthlyData.map(d => d.month).sort();
           const firstMonthPlays = artist.monthlyData.find(d => d.month === months[0]).plays;
@@ -298,11 +299,11 @@ const trendService = {
   },
 
   GetTrendingSongs: async (call, callback) => {
-    const { months } = call.request;
+    const { months, limit } = call.request;  // Default limit to 10 if not provided
     try {
       const currentMonth = moment().month();
       const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - 1 - i).format('MMMM'));
-
+  
       const trendingSongs = await Song.aggregate([
         { $unwind: '$plays' },
         { $match: { 'plays.month': { $in: monthsToInclude } } },
@@ -345,16 +346,16 @@ const trendService = {
           }
         },
         { $sort: { totalPlays: -1 } },
-        { $limit: 10 } // Ensure we only get the top 10 songs
+        { $limit: limit } // Use the user-provided limit
       ]);
-
+  
       const roundedTrendingSongs = trendingSongs.map(song => ({
         title: song.title,
         artist: song.artist,
         total_plays: song.totalPlays,
         growth_rate_per_month: Round(song.growthRate, 3)
       }));
-
+  
       callback(null, { songs: roundedTrendingSongs });
     } catch (error) {
       console.error('Error in GetTrendingSongs:', error);
