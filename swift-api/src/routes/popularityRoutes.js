@@ -117,6 +117,10 @@ router.get('/albums/most_monthly', (req, res) => {
 	client.GetMostPopularAlbumsMonthly({ limit: limit, offset: offset }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);
+			if (err.code === StatusCodes.NOT_FOUND) {
+				console.error('No albums found, returning 404 error');
+				return res.status(404).json({ error: 'No albums found' });
+			}
 			return res.status(500).json({ error: 'Internal Server Error' });
 		}
 		res.json(response.months);
@@ -138,6 +142,10 @@ router.get('/albums/most_all_time', (req, res) => {
 	client.GetMostPopularAlbumsAllTime({ limit: limit, offset: offset }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);
+			if (err.code === StatusCodes.NOT_FOUND) {
+				console.error('No albums found, returning 404 error');
+				return res.status(404).json({ error: 'No albums found' });
+			}
 			return res.status(500).json({ error: 'Internal Server Error' });
 		}
 		res.json(response);

@@ -1,6 +1,6 @@
 // File: services/popularity-service/tests/popularity-service.test.js
 const popularityService = require('../src/popularity-service');
-const { Song } = require('../src/db');
+const { Song, Album } = require('../src/db');
 
 jest.mock('@grpc/grpc-js', () => ({
   Server: jest.fn().mockImplementation(() => ({
@@ -10,11 +10,7 @@ jest.mock('@grpc/grpc-js', () => ({
   })),
   ServerCredentials: {
     createInsecure: jest.fn(),
-  },
-  status: {
-    INTERNAL: 13,
-    // Add other status codes as needed, in future
-  },
+  }
 }));
 
 // Mock the Song model
@@ -22,11 +18,15 @@ jest.mock('../src/db', () => ({
   Song: {
     aggregate: jest.fn(),
     find: jest.fn()
+  },
+  Album: {
+    aggregate: jest.fn(),
+    find: jest.fn()
   }
 }));
 
 // Health Check
-describe('Health Check', () => {
+describe('Popularity Service - HealthCheck', () => {
   test('HealthCheck returns correct status', async () => {
     const mockCallback = jest.fn();
     await popularityService.HealthCheck(null, mockCallback);
@@ -35,7 +35,7 @@ describe('Health Check', () => {
 });
 
 // Get Most Popular Songs
-describe('Get Most Popular Songs', () => {
+describe('Popularity Service - Get Most Popular Songs', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -168,34 +168,28 @@ describe('Get Most Popular Songs', () => {
 });
 
 // Get Song Popularity
-describe('GetSongPopularity', () => {
+describe('Popularity Service - GetSongPopularity', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   test('successfully retrieves song popularity', async () => {
     const mockMatchingSongs = [
-      { _id: '1', title: 'Betty', artist: 'Taylor Swift', plays: [{ month: 'June', count: 100 }, { month: 'July', count: 105 }] },
-      { _id: '2', title: 'Bette Davis Eyes (live cover)', artist: 'Taylor Swift', plays: [{ month: 'June', count: 87 }, { month: 'July', count: 100 }] },
-      { _id: '3', title: 'Better than Revenge', artist: 'Taylor Swift', plays: [{ month: 'June', count: 86 }, { month: 'July', count: 100 }] },
+      { _id: '1', title: "You're Not Sorry", artist: 'Taylor Swift', plays: [{ month: 'June', count: 100 }, { month: 'July', count: 125 }] },
+      { _id: '2', title: 'You Are in Love', artist: 'Taylor Swift', plays: [{ month: 'June', count: 89 }, { month: 'July', count: 100 }] },
+      { _id: '3', title: 'You Need to Calm Down', artist: 'Taylor Swift', plays: [{ month: 'June', count: 86 }, { month: 'July', count: 100 }] },
+      { _id: '4', title: 'You Belong with Me', artist: 'Taylor Swift', plays: [{ month: 'June', count: 76 }, { month: 'July', count: 100 }] },
     ];
 
+    // Mock a larger set of all songs to generate realistic rankings
     const mockAllSongs = [
-      { _id: '1', title: 'Betty', artist: 'Taylor Swift', plays: [{ month: 'June', count: 100 }, { month: 'July', count: 105 }] },
-      { _id: '2', title: 'Bette Davis Eyes (live cover)', artist: 'Taylor Swift', plays: [{ month: 'June', count: 87 }, { month: 'July', count: 100 }] },
-      { _id: '3', title: 'Better than Revenge', artist: 'Taylor Swift', plays: [{ month: 'June', count: 86 }, { month: 'July', count: 100 }] },
-      { _id: '4', title: 'Shake It Off', artist: 'Taylor Swift', plays: [{ month: 'June', count: 150 }, { month: 'July', count: 200 }] },
-      { _id: '5', title: 'Love Story', artist: 'Taylor Swift', plays: [{ month: 'June', count: 90 }, { month: 'July', count: 95 }] },
-      { _id: '6', title: 'You Belong with Me', artist: 'Taylor Swift', plays: [{ month: 'June', count: 140 }, { month: 'July', count: 150 }] },
-      { _id: '7', title: 'Blank Space', artist: 'Taylor Swift', plays: [{ month: 'June', count: 120 }, { month: 'July', count: 130 }] },
-      { _id: '8', title: 'Bad Blood', artist: 'Taylor Swift', plays: [{ month: 'June', count: 110 }, { month: 'July', count: 115 }] },
-      { _id: '9', title: 'We Are Never Ever Getting Back Together', artist: 'Taylor Swift', plays: [{ month: 'June', count: 130 }, { month: 'July', count: 140 }] },
-      { _id: '10', title: 'Wildest Dreams', artist: 'Taylor Swift', plays: [{ month: 'June', count: 95 }, { month: 'July', count: 100 }] },
+      ...mockMatchingSongs,
+      // Add more mock songs here to simulate a larger database and generate the correct ranks
     ];
 
     Song.find.mockResolvedValueOnce(mockMatchingSongs).mockResolvedValueOnce(mockAllSongs);
 
-    const mockCall = { request: { title: 'Bet' } };
+    const mockCall = { request: { title: 'yo' } };
     const mockCallback = jest.fn();
 
     await popularityService.GetSongPopularity(mockCall, mockCallback);
@@ -204,31 +198,39 @@ describe('GetSongPopularity', () => {
     expect(mockCallback).toHaveBeenCalledWith(null, {
       rankings: [
         {
-          title: 'Betty',
+          songId: '1',
+          title: "You're Not Sorry",
           artist: 'Taylor Swift',
-          play_count: 205,
-          rank: expect.any(Number)
+          play_count: 225,
+          rank: 1
         },
         {
-          title: 'Bette Davis Eyes (live cover)',
+          songId: '2',
+          title: 'You Are in Love',
           artist: 'Taylor Swift',
-          play_count: 187,
-          rank: expect.any(Number)
+          play_count: 189,
+          rank: 2
         },
         {
-          title: 'Better than Revenge',
+          songId: '3',
+          title: 'You Need to Calm Down',
           artist: 'Taylor Swift',
           play_count: 186,
-          rank: expect.any(Number)
+          rank: 3
+        },
+        {
+          songId: '4',
+          title: 'You Belong with Me',
+          artist: 'Taylor Swift',
+          play_count: 176,
+          rank: 4
         }
       ]
     });
   });
 
   test('returns NOT_FOUND error when no songs match the query', async () => {
-    Song.find
-      .mockResolvedValueOnce([]) // No matching songs
-      .mockResolvedValueOnce([]); // All songs (should not be called in this case)
+    Song.find.mockResolvedValueOnce([]);
 
     const mockCall = { request: { title: 'Nonexistent' } };
     const mockCallback = jest.fn();
@@ -237,8 +239,9 @@ describe('GetSongPopularity', () => {
 
     expect(Song.find).toHaveBeenCalledTimes(1);
     expect(mockCallback).toHaveBeenCalledWith({
-      code: grpc.status.NOT_FOUND,
-      details: "No songs found"
+      code: 404,
+      message: 'No songs found',
+      status: 'NOT_FOUND'
     });
   });
 
@@ -252,8 +255,169 @@ describe('GetSongPopularity', () => {
 
     expect(Song.find).toHaveBeenCalledTimes(1);
     expect(mockCallback).toHaveBeenCalledWith({
-      code: grpc.status.INTERNAL,
-      details: "Internal server error"
+      code: 500,
+      message: 'Internal Server Error',
+      status: 'INTERNAL'
+    });
+  });
+});
+
+// GetMostPopularAlbumsMonthly
+describe('Popularity Service - GetMostPopularAlbumsMonthly', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('successfully retrieves most popular albums monthly with pagination', async () => {
+    const mockResponse = [
+      { month: 'June', albums: [{ name: 'Lover', artist: 'Taylor Swift', play_count: 1141, rank: 1 }] },
+      { month: 'July', albums: [{ name: 'Lover', artist: 'Taylor Swift', play_count: 1006, rank: 1 }] },
+      { month: 'August', albums: [{ name: 'Reputation', artist: 'Taylor Swift', play_count: 1019, rank: 1 }] }
+    ];
+
+    Album.aggregate.mockResolvedValue(mockResponse);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularAlbumsMonthly(mockCall, mockCallback);
+
+    expect(Album.aggregate).toHaveBeenCalled();
+    expect(mockCallback).toHaveBeenCalledWith(null, {
+      months: {
+        'June': { albums: mockResponse[0].albums },
+        'July': { albums: mockResponse[1].albums },
+        'August': { albums: mockResponse[2].albums }
+      }
+    });
+  });
+
+  test('returns error when no albums match the query for monthly data', async () => {
+    Album.aggregate.mockResolvedValue([]);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularAlbumsMonthly(mockCall, mockCallback);
+
+    expect(Album.aggregate).toHaveBeenCalled();
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 404,
+      message: 'No albums found',
+      status: 'NOT_FOUND'
+    });
+  });
+
+  test('handles database query error in GetMostPopularAlbumsMonthly', async () => {
+    const error = new Error('Database error');
+    Album.aggregate.mockRejectedValue(error);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularAlbumsMonthly(mockCall, mockCallback);
+
+    expect(Album.aggregate).toHaveBeenCalled();
+    expect(mockCallback).toHaveBeenCalledWith(error, null);
+  });
+
+  test('uses default limit and offset when not provided', async () => {
+    const mockResponse = [
+      {
+        month: 'June',
+        albums: [
+          { name: 'Album 2', artist: 'Artist 2', play_count: 200, rank: 1 },
+          { name: 'Album 1', artist: 'Artist 1', play_count: 100, rank: 2 }
+        ]
+      }
+    ];
+
+    Album.aggregate.mockResolvedValue(mockResponse);
+
+    const mockCall = { request: {} }; // Empty request to test defaults
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularAlbumsMonthly(mockCall, mockCallback);
+
+    expect(Album.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith(null, {
+      months: {
+        'June': {
+          albums: mockResponse[0].albums
+        }
+      }
+    });
+  });
+});
+
+// GetMostPopularAlbumsAllTime
+describe('Popularity Service - GetMostPopularAlbumsAllTime', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('successfully retrieves most popular albums all time with pagination', async () => {
+    const mockAlbums = [
+      { name: 'Lover', artist: 'Taylor Swift', play_count: 3130, rank: 1 },
+      { name: 'Folklore', artist: 'Taylor Swift', play_count: 2704, rank: 2 }
+    ];
+
+    Album.aggregate.mockResolvedValue(mockAlbums);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularAlbumsAllTime(mockCall, mockCallback);
+
+    expect(Album.aggregate).toHaveBeenCalled();
+    expect(mockCallback).toHaveBeenCalledWith(null, { albums: mockAlbums });
+  });
+
+  test('returns error when no albums match the query for all time', async () => {
+    Album.aggregate.mockResolvedValue([]);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularAlbumsAllTime(mockCall, mockCallback);
+
+    expect(Album.aggregate).toHaveBeenCalled();
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 404,
+      message: 'No albums found',
+      status: 'NOT_FOUND'
+    });
+  });
+
+  test('handles database query error in GetMostPopularAlbumsAllTime', async () => {
+    const error = new Error('Database error');
+    Album.aggregate.mockRejectedValue(error);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularAlbumsAllTime(mockCall, mockCallback);
+
+    expect(Album.aggregate).toHaveBeenCalled();
+    expect(mockCallback).toHaveBeenCalledWith(error, null);
+  });
+
+  test('uses default limit and offset when not provided', async () => {
+    const mockResponse = [
+      { name: 'Album 2', artist: 'Artist 2', play_count: 200, rank: 1 },
+      { name: 'Album 1', artist: 'Artist 1', play_count: 100, rank: 2 }
+    ];
+  
+    Album.aggregate.mockResolvedValue(mockResponse);
+  
+    const mockCall = { request: {} };  // Empty request to test defaults
+    const mockCallback = jest.fn();
+  
+    await popularityService.GetMostPopularAlbumsAllTime(mockCall, mockCallback);
+  
+    expect(Album.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith(null, {
+      albums: mockResponse
     });
   });
 });

@@ -259,7 +259,11 @@ const popularityService = {
 
       if (Object.keys(response.months || {}).length === 0) {
         console.error('Empty response generated. Check MongoDB query and data.');
-        callback(new Error('No data found'), null);
+        return callback({
+          code: 404,
+          message: 'No albums found',
+          status: 'NOT_FOUND'
+        });
       } else
         callback(null, response);
     } catch (error) {
@@ -309,8 +313,11 @@ const popularityService = {
       let response = { albums: result };
 
       if (!response.albums || response.albums.length === 0) {
-        console.error('Empty response generated. Check MongoDB query and data.');
-        callback(new Error('No data found'), null);
+        return callback({
+          code: 404,
+          message: 'No albums found',
+          status: 'NOT_FOUND'
+        });
       } else
         callback(null, response);
     } catch (error) {
