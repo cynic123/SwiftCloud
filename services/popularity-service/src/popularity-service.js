@@ -337,7 +337,7 @@ const popularityService = {
       });
 
       console.log(`Found ${matchingAlbums.length} albums matching the query`);
-      console.log('Matching albums:', matchingAlbums.map(a => a._doc.name));
+      console.log('Matching albums:', matchingAlbums.map(a => a.name));
 
       if (matchingAlbums.length === 0) {
         console.log('No albums found, returning NOT_FOUND error');
@@ -355,10 +355,10 @@ const popularityService = {
 
       // Aggregate play counts across all months for each album
       const albumPlayCounts = allAlbums.map(album => {
-        const totalPlayCount = album.plays ? album.plays.reduce((sum, play) => sum + play._doc.count, 0) : 0;
+        const totalPlayCount = album.plays.reduce((sum, play) => sum + play.count, 0);
         return {
-          name: album._doc.name,
-          artist: album._doc.artist || '',
+          name: album.name,
+          artist: album.artist,
           totalPlayCount
         };
       });
@@ -371,7 +371,7 @@ const popularityService = {
 
       // Filter the album play counts to include only the matching albums
       const filteredAlbumPlayCounts = albumPlayCounts.filter(album =>
-        matchingAlbums.some(ma => ma._doc.name === album.name)
+        matchingAlbums.some(ma => ma.name === album.name)
       );
 
       const response = {

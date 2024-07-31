@@ -407,17 +407,136 @@ describe('Popularity Service - GetMostPopularAlbumsAllTime', () => {
       { name: 'Album 2', artist: 'Artist 2', play_count: 200, rank: 1 },
       { name: 'Album 1', artist: 'Artist 1', play_count: 100, rank: 2 }
     ];
-  
+
     Album.aggregate.mockResolvedValue(mockResponse);
-  
+
     const mockCall = { request: {} };  // Empty request to test defaults
     const mockCallback = jest.fn();
-  
+
     await popularityService.GetMostPopularAlbumsAllTime(mockCall, mockCallback);
-  
+
     expect(Album.aggregate).toHaveBeenCalledTimes(1);
     expect(mockCallback).toHaveBeenCalledWith(null, {
       albums: mockResponse
+    });
+  });
+});
+
+// GetAlbumPopularity
+describe('Popularity Service - GetAlbumPopularity', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('successfully retrieves album popularity', async () => {
+    const mockMatchingAlbums = [
+      {
+        name: 'Speak Now',
+        artist: 'Taylor Swift',
+        plays: [
+          { month: 'June', count: 1000 },
+          { month: 'July', count: 1532 }
+        ]
+      },
+      {
+        name: 'Speak Now World Tour – Live',
+        artist: 'Taylor Swift',
+        plays: [
+          { month: 'June', count: 400 },
+          { month: 'July', count: 458 }
+        ]
+      },
+      {
+        name: 'Speak Now (Deluxe edition)',
+        artist: 'Taylor Swift',
+        plays: [
+          { month: 'June', count: 200 },
+          { month: 'July', count: 242 }
+        ]
+      },
+    ];
+
+    const mockAllAlbums = [
+      ...mockMatchingAlbums,
+      {
+        name: 'Fearless',
+        artist: 'Taylor Swift',
+        plays: [
+          { month: 'June', count: 2000 },
+          { month: 'July', count: 2500 }
+        ]
+      },
+      {
+        name: '1989',
+        artist: 'Taylor Swift',
+        plays: [
+          { month: 'June', count: 3000 },
+          { month: 'July', count: 3500 }
+        ]
+      },
+    ];
+
+    Album.find.mockResolvedValueOnce(mockMatchingAlbums).mockResolvedValueOnce(mockAllAlbums);
+
+    const mockCall = { request: { name: 'Speak' } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetAlbumPopularity(mockCall, mockCallback);
+
+    expect(Album.find).toHaveBeenCalledTimes(2);
+    expect(mockCallback).toHaveBeenCalledWith(null, {
+      rankings: [
+        {
+          name: 'Speak Now',
+          artist: 'Taylor Swift',
+          play_count: 2532,
+          rank: 3
+        },
+        {
+          name: 'Speak Now World Tour – Live',
+          artist: 'Taylor Swift',
+          play_count: 858,
+          rank: 4
+        },
+        {
+          name: 'Speak Now (Deluxe edition)',
+          artist: 'Taylor Swift',
+          play_count: 442,
+          rank: 5
+        }
+      ]
+    });
+  });
+
+  test('returns NOT_FOUND error when no albums match the query', async () => {
+    Album.find.mockResolvedValueOnce([]);
+
+    const mockCall = { request: { name: 'Nonexistent' } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetAlbumPopularity(mockCall, mockCallback);
+
+    expect(Album.find).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 404,
+      message: 'No albums found',
+      status: 'NOT_FOUND'
+    });
+  });
+
+  test('handles database error gracefully', async () => {
+    Album.find.mockRejectedValueOnce(new Error('Database error'));
+
+    const mockCall = { request: { name: 'Test' } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetAlbumPopularity(mockCall, mockCallback);
+
+    expect(Album.find).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 500,
+      message: 'Internal Server Error',
+      status: 'INTERNAL'
     });
   });
 });
