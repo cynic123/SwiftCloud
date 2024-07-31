@@ -1,6 +1,6 @@
 // File: services/popularity-service/tests/popularity-service.test.js
 const popularityService = require('../src/popularity-service');
-const { Song, Album } = require('../src/db');
+const { Song, Album, Artist } = require('../src/db');
 
 jest.mock('@grpc/grpc-js', () => ({
   Server: jest.fn().mockImplementation(() => ({
@@ -22,6 +22,9 @@ jest.mock('../src/db', () => ({
   Album: {
     aggregate: jest.fn(),
     find: jest.fn()
+  },
+  Artist: {
+    aggregate: jest.fn() 
   }
 }));
 
@@ -538,5 +541,212 @@ describe('Popularity Service - GetAlbumPopularity', () => {
       message: 'Internal Server Error',
       status: 'INTERNAL'
     });
+  });
+});
+
+describe('Popularity Service - GetMostPopularArtistsMonthly', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('successfully retrieves most popular artists monthly', async () => {
+    const mockAggregateResult = [
+      {
+        month: 'June',
+        artists: [
+          { name: 'Taylor Swift', play_count: 8097, rank: 1 },
+          { name: 'Taylor Swift\nfeaturing Dixie Chicks', play_count: 110, rank: 2 },
+          { name: 'B.o.B\nfeaturing Taylor Swift', play_count: 104, rank: 3 },
+          { name: 'Zayn and Taylor Swift', play_count: 103, rank: 4 },
+          { name: 'Jack Ingram\nfeaturing Taylor Swift', play_count: 91, rank: 5 }
+        ]
+      },
+      {
+        month: 'July',
+        artists: [
+          { name: 'Taylor Swift', play_count: 8173, rank: 1 },
+          { name: 'Taylor Swift\nfeaturing Shawn Mendes', play_count: 110, rank: 2 },
+          { name: 'Jack Ingram\nfeaturing Taylor Swift', play_count: 109, rank: 3 },
+          { name: 'Tim McGraw and Taylor Swift\nfeaturing Keith Urban', play_count: 102, rank: 4 },
+          { name: 'John Mayer\nfeaturing Taylor Swift', play_count: 102, rank: 5 }
+        ]
+      },
+      {
+        month: 'August',
+        artists: [
+          { name: 'Taylor Swift', play_count: 9112, rank: 1 },
+          { name: 'Taylor Swift\nfeaturing Paula Fernandes', play_count: 108, rank: 2 },
+          { name: 'Taylor Swift\nfeaturing Colbie Caillat', play_count: 104, rank: 3 },
+          { name: 'Taylor Swift\nfeaturing Ed Sheeran', play_count: 95, rank: 4 },
+          { name: 'Taylor Swift\nfeaturing Ed Sheeran and Future', play_count: 89, rank: 5 }
+        ]
+      }
+    ];
+
+    Artist.aggregate.mockResolvedValue(mockAggregateResult);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularArtistsMonthly(mockCall, mockCallback);
+
+    expect(Artist.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith(null, {
+      months: {
+        'June': { artists: mockAggregateResult[0].artists },
+        'July': { artists: mockAggregateResult[1].artists },
+        'August': { artists: mockAggregateResult[2].artists }
+      }
+    });
+  });
+
+  test('returns NOT_FOUND error when no artists found', async () => {
+    Artist.aggregate.mockResolvedValue([]);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularArtistsMonthly(mockCall, mockCallback);
+
+    expect(Artist.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 404,
+      message: 'No artists found',
+      status: 'NOT_FOUND'
+    });
+  });
+
+  test('handles database error gracefully', async () => {
+    const error = new Error('Database error');
+    Artist.aggregate.mockRejectedValue(error);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularArtistsMonthly(mockCall, mockCallback);
+
+    expect(Artist.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 500,
+      message: 'Internal Server Error',
+      status: 'INTERNAL'
+    });
+  });
+});
+
+describe('Popularity Service - GetMostPopularArtistsAllTime', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('successfully retrieves most popular artists all time', async () => {
+    const mockAggregateResult = [
+      {
+        artists: [
+          { name: 'Taylor Swift', play_count: 25382, rank: 1 },
+          { name: 'B.o.B\nfeaturing Taylor Swift', play_count: 274, rank: 2 },
+          { name: 'Zayn and Taylor Swift', play_count: 258, rank: 3 },
+          { name: 'Taylor Swift\nfeaturing Paula Fernandes', play_count: 243, rank: 4 },
+          { name: 'Taylor Swift\nfeaturing Colbie Caillat', play_count: 235, rank: 5 }
+        ]
+      }
+    ];
+
+    Artist.aggregate.mockResolvedValue(mockAggregateResult);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularArtistsAllTime(mockCall, mockCallback);
+
+    expect(Artist.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith(null, mockAggregateResult[0]);
+  });
+
+  test('handles pagination correctly', async () => {
+    const mockAggregateResult = [
+      {
+        artists: [
+          { name: 'Taylor Swift\nfeaturing Ed Sheeran', play_count: 230, rank: 6 },
+          { name: 'Taylor Swift\nfeaturing Brendon Urie of Panic! at the Disco', play_count: 225, rank: 7 }
+        ]
+      }
+    ];
+
+    Artist.aggregate.mockResolvedValue(mockAggregateResult);
+
+    const mockCall = { request: { limit: 2, offset: 5 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularArtistsAllTime(mockCall, mockCallback);
+
+    expect(Artist.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith(null, mockAggregateResult[0]);
+    
+    // Check if the aggregation pipeline includes correct limit and offset
+    const aggregationPipeline = Artist.aggregate.mock.calls[0][0];
+    const projectStage = aggregationPipeline.find(stage => stage.$project);
+    expect(projectStage.$project.artists.$map.input.$slice[1]).toBe(5); // offset
+    expect(projectStage.$project.artists.$map.input.$slice[2]).toBe(2); // limit
+  });
+
+  test('returns NOT_FOUND error when no artists found', async () => {
+    Artist.aggregate.mockResolvedValue([]);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularArtistsAllTime(mockCall, mockCallback);
+
+    expect(Artist.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 404,
+      message: 'No artists found',
+      status: 'NOT_FOUND'
+    });
+  });
+
+  test('handles database error gracefully', async () => {
+    const error = new Error('Database error');
+    Artist.aggregate.mockRejectedValue(error);
+
+    const mockCall = { request: { limit: 5, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularArtistsAllTime(mockCall, mockCallback);
+
+    expect(Artist.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 500,
+      message: 'Internal Server Error',
+      status: 'INTERNAL'
+    });
+  });
+
+  test('uses default limit and offset when not provided', async () => {
+    const mockAggregateResult = [
+      {
+        artists: [
+          { name: 'Taylor Swift', play_count: 25382, rank: 1 },
+          { name: 'B.o.B\nfeaturing Taylor Swift', play_count: 274, rank: 2 }
+        ]
+      }
+    ];
+
+    Artist.aggregate.mockResolvedValue(mockAggregateResult);
+
+    const mockCall = { request: {} };  // Empty request to test defaults
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularArtistsAllTime(mockCall, mockCallback);
+
+    expect(Artist.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith(null, mockAggregateResult[0]);
+    
+    // Check if the aggregation pipeline uses default limit and offset
+    const aggregationPipeline = Artist.aggregate.mock.calls[0][0];
+    const projectStage = aggregationPipeline.find(stage => stage.$project);
+    expect(projectStage.$project.artists.$map.input.$slice[1]).toBe(0); // default offset
+    expect(projectStage.$project.artists.$map.input.$slice[2]).toBe(10); // default limit
   });
 });
