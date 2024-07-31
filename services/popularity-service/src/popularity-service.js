@@ -1,5 +1,4 @@
 const { Song, Album, Artist } = require('./db');
-const moment = require('moment');
 
 const popularityService = {
   HealthCheck: async (call, callback) => {
@@ -7,7 +6,7 @@ const popularityService = {
       callback(null, { status: 'Welcome to Popularity Service!' });
     } catch (err) {
       console.error('Health check error:', err);
-      callback({
+      return callback({
         code: 500,
         message: 'Internal Server Error',
         status: 'INTERNAL'
@@ -143,8 +142,9 @@ const popularityService = {
       if (matchingSongs.length === 0) {
         console.log('No songs found, returning NOT_FOUND error');
         return callback({
-          code: grpc.status.NOT_FOUND,
-          details: "No songs found"
+          code: 404,
+          message: 'No songs found',
+          status: 'NOT_FOUND'
         });
       }
 
@@ -190,8 +190,9 @@ const popularityService = {
     } catch (error) {
       console.error('Error in GetSongPopularity:', error);
       callback({
-        code: grpc.status.INTERNAL,
-        details: "Internal server error"
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
       });
     }
   },
@@ -244,8 +245,9 @@ const popularityService = {
     } catch (error) {
       console.error('Error in GetMostPopularAlbums:', error);
       callback({
-        code: grpc.status.INTERNAL,
-        details: "Internal server error"
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
       });
     }
   },
@@ -266,8 +268,9 @@ const popularityService = {
       if (matchingAlbums.length === 0) {
         console.log('No albums found, returning NOT_FOUND error');
         return callback({
-          code: grpc.status.NOT_FOUND,
-          details: "No albums found"
+          code: 404,
+          message: 'No albums found',
+          status: 'NOT_FOUND'
         });
       }
 
@@ -310,8 +313,9 @@ const popularityService = {
     } catch (error) {
       console.error('Error in GetAlbumPopularity:', error);
       callback({
-        code: grpc.status.INTERNAL,
-        details: "Internal server error"
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
       });
     }
   },
@@ -361,8 +365,9 @@ const popularityService = {
     } catch (error) {
       console.error('Error in GetMostPopularArtists:', error);
       callback({
-        code: grpc.status.INTERNAL,
-        details: "Internal server error"
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
       });
     }
   },
@@ -383,8 +388,9 @@ const popularityService = {
       if (matchingArtists.length === 0) {
         console.log('No artists found, returning NOT_FOUND error');
         return callback({
-          code: grpc.status.NOT_FOUND,
-          details: "No albums found"
+          code: 404,
+          message: 'No artists found',
+          status: 'NOT_FOUND'
         });
       }
 
@@ -425,8 +431,9 @@ const popularityService = {
     } catch (error) {
       console.error('Error in GetAlbumPopularity:', error);
       callback({
-        code: grpc.status.INTERNAL,
-        details: "Internal server error"
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
       });
     }
   }

@@ -2,6 +2,7 @@ const express = require('express');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
+const { StatusCodes } = require('http-status-codes');
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ router.get('/health', (req, res) => {
 
 // Get most popular songs
 router.get('/songs/most', (req, res) => {
-	const { period, limit = 10, offset = 0 } = req.query;
+	const { period, limit = 50, offset = 0 } = req.query;
 	console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
 
 	// Validation
@@ -89,7 +90,7 @@ router.get('/songs/song', (req, res) => {
 	client.GetSongPopularity({ title }, (err, response) => {
 		if (err) {
 			console.error('gRPC error:', err);
-			if (err.code === grpc.status.NOT_FOUND) {
+			if (err.code === StatusCodes.NOT_FOUND) {
 				console.error('No songs found, returning 404 error');
 				return res.status(404).json({ error: 'No songs found' });
 			}
@@ -141,7 +142,12 @@ router.get('/albums/album', (req, res) => {
 
 	client.GetAlbumPopularity({ name }, (err, response) => {
 		if (err) {
-			console.error('Error:', err);
+			console.error('gRPC error:', err);
+			if (err.code === StatusCodes.NOT_FOUND) {
+				console.error('No albums found, returning 404 error');
+				return res.status(404).json({ error: 'No albums found' });
+			}
+			console.error('Internal server error, returning 500 error');
 			return res.status(500).json({ error: 'Internal Server Error' });
 		}
 		res.json(response);
@@ -185,7 +191,12 @@ router.get('/artists/artist', (req, res) => {
 
 	client.GetArtistPopularity({ name }, (err, response) => {
 		if (err) {
-			console.error('Error:', err);
+			console.error('gRPC error:', err);
+			if (err.code === StatusCodes.NOT_FOUND) {
+				console.error('No artists found, returning 404 error');
+				return res.status(404).json({ error: 'No artists found' });
+			}
+			console.error('Internal server error, returning 500 error');
 			return res.status(500).json({ error: 'Internal Server Error' });
 		}
 		res.json(response);
