@@ -177,24 +177,50 @@ router.get('/albums/album', (req, res) => {
 	});
 });
 
-// Get most popular artists
-router.get('/artists/most', (req, res) => {
-	const { period, limit = 10, offset = 0 } = req.query;
-	console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
+// Get most popular artists monthly wise
+router.get('/artists/most_monthly', (req, res) => {
+	const { limit = 50, offset = 0 } = req.query;
+	console.log(`Received request with limit: ${limit}, offset: ${offset}`);
 
 	// Validation
-	if (!period)
-		return res.status(400).json({ error: 'Period parameter is required' });
-
 	if (limit && isNaN(limit))
-		return res.status(400).json({ error: 'Limit parameter must be a number' });
+		return res.status(400).json({ error: 'limit parameter must be a number' });
 
 	if (offset && isNaN(offset))
-		return res.status(400).json({ error: 'Offset parameter must be a number' });
+		return res.status(400).json({ error: 'offset parameter must be a number' });
 
-	client.GetMostPopularArtists({ period, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
+	client.GetMostPopularArtistsMonthly({ limit: limit, offset: offset }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);
+			if (err.code === StatusCodes.NOT_FOUND) {
+				console.error('No artists found, returning 404 error');
+				return res.status(404).json({ error: 'No artists found' });
+			}
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response.months);
+	});
+});
+
+// Get most popular artists all time
+router.get('/artists/most_all_time', (req, res) => {
+	const { limit = 50, offset = 0 } = req.query;
+	console.log(`Received request with limit: ${limit}, offset: ${offset}`);
+
+	// Validation
+	if (limit && isNaN(limit))
+		return res.status(400).json({ error: 'limit parameter must be a number' });
+
+	if (offset && isNaN(offset))
+		return res.status(400).json({ error: 'offset parameter must be a number' });
+
+	client.GetMostPopularArtistsAllTime({ limit: limit, offset: offset }, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			if (err.code === StatusCodes.NOT_FOUND) {
+				console.error('No albums found, returning 404 error');
+				return res.status(404).json({ error: 'No albums found' });
+			}
 			return res.status(500).json({ error: 'Internal Server Error' });
 		}
 		res.json(response);

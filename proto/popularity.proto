@@ -8,7 +8,8 @@ service PopularityService {
   rpc GetMostPopularAlbumsMonthly (PopularityRequest) returns (PopularMonthlyAlbumsResponse) {}
   rpc GetMostPopularAlbumsAllTime (PopularityRequest) returns (PopularAllTimeAlbumsResponse) {}
   rpc GetAlbumPopularity (AlbumPopularityRequest) returns (AlbumPopularityResponse) {}
-  rpc GetMostPopularArtists (PopularityRequest) returns (PopularArtistsResponse) {}
+  rpc GetMostPopularArtistsMonthly (PopularityRequest) returns (PopularMonthlyArtistsResponse) {}
+  rpc GetMostPopularArtistsAllTime (PopularityRequest) returns (PopularAllTimeArtistsResponse) {}
   rpc GetArtistPopularity (AlbumPopularityRequest) returns (ArtistPopularityResponse) {}
   rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
 }
@@ -81,15 +82,22 @@ message AlbumPopularityResponse {
 
 message ArtistPopularity {
   string name = 1;
-  string artist = 2;
-  int32 play_count = 3;
-  int32 rank = 4;
+  int32 play_count = 2;
+  int32 rank = 3;
+}
+
+message PopularMonthlyArtistsResponse {
+  map<string, ArtistList> months = 1;
+}
+
+message PopularAllTimeArtistsResponse {
+  repeated ArtistPopularity artists = 1;
+}
+
+message ArtistList {
+  repeated ArtistPopularity artists = 1;
 }
 
 message ArtistPopularityResponse {
   repeated ArtistPopularity rankings = 1;
-}
-
-message PopularArtistsResponse {
-  repeated ArtistPopularity artists = 1;
 }

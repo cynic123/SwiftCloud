@@ -267,7 +267,7 @@ const popularityService = {
       } else
         callback(null, response);
     } catch (error) {
-      console.error('Error in GetMostPopularAlbums:', error);
+      console.error('Error in GetMostPopularAlbumsMonthly:', error);
       callback(error, null);
     }
   },
@@ -394,50 +394,133 @@ const popularityService = {
     }
   },
 
-  GetMostPopularArtists: async (call, callback) => {
-    const { period, limit = 10, offset = 0 } = call.request;
-    console.log(`Received request with period: "${period}", limit: ${limit}, offset: ${offset}`);
-
+  GetMostPopularArtistsMonthly: async (call, callback) => {
+    const { limit = 10, offset = 0 } = call.request;
+    console.log(`Received request with limit: ${limit}, offset: ${offset}`);
+  
     try {
-      // Fetch all artists
-      const allArtists = await Artist.find();
-      console.log(`Found ${allArtists.length} artists in total`);
-
-      // Aggregate play counts across all months for each album
-      const artistPlayCounts = allArtists.map(artist => {
-        const totalPlayCount = artist.plays && artist.plays.length > 0
-          ? artist.plays.reduce((sum, play) => {
-            return sum + play._doc.count;
-          }, 0)
-          : 0;
-        return {
-          name: artist._doc.name,
-          artist: artist._doc.artist || '',
-          totalPlayCount
-        };
-      });
-
-      // Sort artists by total play count and add rank
-      artistPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
-      artistPlayCounts.forEach((artist, index) => {
-        artist.rank = index + 1;
-      });
-
-      // Paginate the results
-      const paginatedArtists = artistPlayCounts.slice(offset, offset + limit);
-
-      const response = {
-        artists: paginatedArtists.map(artist => ({
-          name: artist.name,
-          play_count: artist.totalPlayCount,
-          rank: artist.rank
-        })),
-        total_count: allArtists.length
+      let aggregationPipeline = [
+        { $unwind: '$plays' },
+        {
+          $group: {
+            _id: { artistId: '$_id', month: '$plays.month' },
+            name: { $first: '$name' },
+            playCount: { $sum: '$plays.count' }
+          }
+        },
+        {
+          $group: {
+            _id: '$_id.month',
+            artists: {
+              $push: {
+                name: '$name',
+                play_count: '$playCount'
+              }
+            }
+          }
+        },
+        { $sort: { "_id": -1 } },
+        {
+          $project: {
+            _id: 0,
+            month: '$_id',
+            artists: {
+              $map: {
+                input: { $slice: [{ $sortArray: { input: '$artists', sortBy: { play_count: -1 } } }, offset, limit] },
+                as: 'artist',
+                in: {
+                  $mergeObjects: [
+                    '$$artist',
+                    { rank: { $add: [{ $indexOfArray: [{ $sortArray: { input: '$artists', sortBy: { play_count: -1 } } }, '$$artist'] }, 1] } }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ];
+  
+      const result = await Artist.aggregate(aggregationPipeline);
+      
+      let response = {
+        months: result.reduce((acc, { month, artists }) => {
+          acc[month] = { artists };
+          return acc;
+        }, {})
       };
-
-      callback(null, response);
+  
+      if (Object.keys(response.months || {}).length === 0) {
+        console.error('Empty response generated. Check MongoDB query and data.');
+        return callback({
+          code: 404,
+          message: 'No artists found',
+          status: 'NOT_FOUND'
+        });
+      } else {
+        callback(null, response);
+      }
     } catch (error) {
-      console.error('Error in GetMostPopularArtists:', error);
+      console.error('Error in GetMostPopularArtistsMonthly:', error);
+      callback({
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
+      });
+    }
+  },
+
+  GetMostPopularArtistsAllTime: async (call, callback) => {
+    const { limit = 10, offset = 0 } = call.request;
+    console.log(`Received request with limit: ${limit}, offset: ${offset}`);
+  
+    try {
+      let aggregationPipeline = [
+        { $unwind: '$plays' },
+        {
+          $group: {
+            _id: '$_id',
+            name: { $first: '$name' },
+            totalPlays: { $sum: '$plays.count' }
+          }
+        },
+        { $sort: { totalPlays: -1, name: 1 } },
+        {
+          $group: {
+            _id: null,
+            artists: { $push: '$$ROOT' }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            artists: {
+              $map: {
+                input: { $slice: ['$artists', offset, limit] },
+                as: 'artist',
+                in: {
+                  name: '$$artist.name',
+                  play_count: '$$artist.totalPlays',
+                  rank: { $add: [{ $indexOfArray: ['$artists', '$$artist'] }, 1] }
+                }
+              }
+            }
+          }
+        }
+      ];
+  
+      const result = await Artist.aggregate(aggregationPipeline);
+      
+      if (!result || result.length === 0 || result[0].artists.length === 0) {
+        return callback({
+          code: 404,
+          message: 'No artists found',
+          status: 'NOT_FOUND'
+        });
+      } else {
+        callback(null, result[0]);
+      }
+    } catch (error) {
+      console.error('Error in GetMostPopularArtistsAllTime:', error);
       callback({
         code: 500,
         message: 'Internal Server Error',
