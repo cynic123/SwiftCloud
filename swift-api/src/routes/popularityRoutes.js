@@ -102,25 +102,40 @@ router.get('/songs/song', (req, res) => {
 	});
 });
 
-// Get most popular albums
-router.get('/albums/most', (req, res) => {
-	const { period, limit = 10, offset = 0 } = req.query;
-	console.log(`Received request with period: ${period}, limit: ${limit}, offset: ${offset}`);
+// Get most popular albums monthly wise
+router.get('/albums/most_monthly', (req, res) => {
+	const { limit = 50, offset = 0 } = req.query;
+	console.log(`Received request with limit: ${limit}, offset: ${offset}`);
 
 	// Validation
-	if (!period)
-		return res.status(400).json({ error: 'period parameter is required' });
-
-	if(!(period === 'monthly' || period === 'all_time'))
-		return res.status(400).json({ error: 'period should be either monthly or all_time' });
-
 	if (limit && isNaN(limit))
 		return res.status(400).json({ error: 'limit parameter must be a number' });
 
 	if (offset && isNaN(offset))
 		return res.status(400).json({ error: 'offset parameter must be a number' });
 
-	client.GetMostPopularAlbums({ period, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
+	client.GetMostPopularAlbumsMonthly({ limit: limit, offset: offset }, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response.months);
+	});
+});
+
+// Get most popular albums all time
+router.get('/albums/most_all_time', (req, res) => {
+	const { limit = 50, offset = 0 } = req.query;
+	console.log(`Received request with limit: ${limit}, offset: ${offset}`);
+
+	// Validation
+	if (limit && isNaN(limit))
+		return res.status(400).json({ error: 'limit parameter must be a number' });
+
+	if (offset && isNaN(offset))
+		return res.status(400).json({ error: 'offset parameter must be a number' });
+
+	client.GetMostPopularAlbumsAllTime({ limit: limit, offset: offset }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);
 			return res.status(500).json({ error: 'Internal Server Error' });

@@ -197,58 +197,125 @@ const popularityService = {
     }
   },
 
-  GetMostPopularAlbums: async (call, callback) => {
-    const { period, limit = 10, offset = 0 } = call.request;
-    console.log(`Received request with period: "${period}", limit: ${limit}, offset: ${offset}`);
+  GetMostPopularAlbumsMonthly: async (call, callback) => {
+    const { limit, offset } = call.request;
+    console.log(`Received request with limit: ${limit}, offset: ${offset}`);
 
     try {
-      // Fetch all albums
-      const allAlbums = await Album.find();
-      console.log(`Found ${allAlbums.length} albums in total`);
+      let aggregationPipeline = [
+        { $unwind: '$plays' },
+        {
+          $group: {
+            _id: { albumId: '$_id', month: '$plays.month' },
+            name: { $first: '$name' },
+            artist: { $first: '$artist' },
+            playCount: { $first: '$plays.count' }
+          }
+        },
+        { $sort: { playCount: -1, name: 1 } },
+        {
+          $group: {
+            _id: '$_id.month',
+            albums: {
+              $push: {
+                name: '$name',
+                artist: '$artist',
+                play_count: '$playCount'
+              }
+            },
+            maxPlayCount: { $max: '$playCount' }
+          }
+        },
+        { $sort: { "_id": -1 } },
+        {
+          $project: {
+            _id: 0,
+            month: '$_id',
+            albums: {
+              $map: {
+                input: { $slice: ['$albums', offset, limit] },
+                in: {
+                  $mergeObjects: [
+                    '$$this',
+                    {
+                      rank: { $add: [{ $indexOfArray: ['$albums', '$$this'] }, 1] }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ];
 
-      // Aggregate play counts across all months for each album
-      const albumPlayCounts = allAlbums.map(album => {
-        const totalPlayCount = album.plays && album.plays.length > 0
-          ? album.plays.reduce((sum, play) => {
-            return sum + play._doc.count;
-          }, 0)
-          : 0;
-        return {
-          name: album._doc.name,
-          artist: album._doc.artist || '',
-          writers: album._doc.writers || [],
-          totalPlayCount
-        };
-      });
-
-      // Sort albums by total play count and add rank
-      albumPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
-      albumPlayCounts.forEach((album, index) => {
-        album.rank = index + 1;
-      });
-
-      // Paginate the results
-      const paginatedAlbums = albumPlayCounts.slice(offset, offset + limit);
-
-      const response = {
-        albums: paginatedAlbums.map(album => ({
-          name: album.name,
-          artist: album.artist,
-          writers: album.writers,
-          play_count: album.totalPlayCount,
-          rank: album.rank
-        })),
-        total_count: allAlbums.length
+      const result = await Album.aggregate(aggregationPipeline);
+      
+      let response = {
+        months: result.reduce((acc, { month, albums }) => {
+          acc[month] = { albums };
+          return acc;
+        }, {})
       };
 
-      callback(null, response);
+      if (Object.keys(response.months || {}).length === 0) {
+        console.error('Empty response generated. Check MongoDB query and data.');
+        callback(new Error('No data found'), null);
+      } else
+        callback(null, response);
     } catch (error) {
       console.error('Error in GetMostPopularAlbums:', error);
-      callback({
-        code: 500,
-        message: 'Internal Server Error',
-        status: 'INTERNAL'
-      });
+      callback(error, null);
+    }
+  },
+
+  GetMostPopularAlbumsAllTime: async (call, callback) => {
+    const { limit, offset } = call.request;
+    console.log(`Received request with limit: ${limit}, offset: ${offset}`);
+
+    try {
+      let aggregationPipeline = [
+        { $unwind: '$plays' },
+        {
+          $group: {
+            _id: '$_id',
+            name: { $first: '$name' },
+            artist: { $first: '$artist' },
+            totalPlays: { $sum: '$plays.count' }
+          }
+        },
+        { $sort: { totalPlays: -1, name: 1 } },
+        { $skip: offset },
+        { $limit: limit },
+        {
+          $group: {
+            _id: null,
+            albums: { $push: '$$ROOT' },
+            maxPlayCount: { $max: '$totalPlays' }
+          }
+        },
+        { $unwind: { path: '$albums', includeArrayIndex: 'index' } },
+        {
+          $project: {
+            _id: 0,
+            name: '$albums.name',
+            artist: '$albums.artist',
+            play_count: '$albums.totalPlays',
+            rank: { $add: ['$index', 1] }
+          }
+        }
+      ];
+
+      const result = await Album.aggregate(aggregationPipeline);
+      let response = { albums: result };
+
+      if (!response.albums || response.albums.length === 0) {
+        console.error('Empty response generated. Check MongoDB query and data.');
+        callback(new Error('No data found'), null);
+      } else
+        callback(null, response);
+    } catch (error) {
+      console.error('Error in GetMostPopularAlbumsAllTime:', error);
+      callback(error, null);
     }
   },
 
@@ -380,7 +447,7 @@ const popularityService = {
       // Find artists that match the name query
       const matchingArtists = await Artist.find({
         name: { $regex: name, $options: 'i' }  // Changed to match any occurrence of the name
-      });  
+      });
 
       console.log(`Found ${matchingArtists.length} artists matching the query`);
       console.log('Matching artists:', matchingArtists.map(a => a._doc.name));
