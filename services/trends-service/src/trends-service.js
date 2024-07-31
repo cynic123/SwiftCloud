@@ -26,6 +26,7 @@ const trendService = {
 
       const totalPlays = totalPlaysResult.length > 0 ? totalPlaysResult[0].total : 0;
       const songCount = await Song.countDocuments();
+      const averagePlaysPerSong = songCount > 0 ? Round((totalPlays / songCount), 3) : 0;
 
       const topArtists = await Artist.aggregate([
         {
@@ -72,7 +73,7 @@ const trendService = {
 
       const result = {
         total_plays: totalPlays,
-        average_plays_per_song: Round((totalPlays / songCount), 3),
+        average_plays_per_song: averagePlaysPerSong,
         top_artists: topArtists.map(artist => {
           const months = artist.monthlyData.map(d => d.month).sort();
           const firstMonthPlays = artist.monthlyData.find(d => d.month === months[0]).plays;
@@ -124,8 +125,9 @@ const trendService = {
     } catch (error) {
       console.error('Error in GetOverallTrends:', error);
       callback({
-        code: grpc.status.INTERNAL,
-        details: "Internal server error"
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
       });
     }
   },
@@ -133,166 +135,167 @@ const trendService = {
   GetTrendsByPeriod: async (call, callback) => {
     const { start_month, end_month } = call.request;
     try {
-        console.log(`Received request with start_month: ${start_month}, end_month: ${end_month}`);
+      console.log(`Received request with start_month: ${start_month}, end_month: ${end_month}`);
 
-        const startMonthNumber = start_month - 1; // Convert to 0-indexed
-        const endMonthNumber = end_month - 1; // Convert to 0-indexed
+      const startMonthNumber = start_month - 1; // Convert to 0-indexed
+      const endMonthNumber = end_month - 1; // Convert to 0-indexed
 
-        const totalPlaysResult = await Song.aggregate([
-            { $unwind: '$plays' },
-            {
-                $addFields: {
-                    'plays.monthNumber': {
-                        $indexOfArray: [
-                            ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-                            '$plays.month'
-                        ]
-                    }
-                }
-            },
-            {
-                $match: {
-                    'plays.monthNumber': {
-                        $gte: startMonthNumber,
-                        $lte: endMonthNumber
-                    }
-                }
-            },
-            {
-                $group: {
-                    _id: null,
-                    totalPlays: { $sum: '$plays.count' }
-                }
+      const totalPlaysResult = await Song.aggregate([
+        { $unwind: '$plays' },
+        {
+          $addFields: {
+            'plays.monthNumber': {
+              $indexOfArray: [
+                ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+                '$plays.month'
+              ]
             }
-        ]);
+          }
+        },
+        {
+          $match: {
+            'plays.monthNumber': {
+              $gte: startMonthNumber,
+              $lte: endMonthNumber
+            }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalPlays: { $sum: '$plays.count' }
+          }
+        }
+      ]);
 
-        console.log(`Total plays result: ${JSON.stringify(totalPlaysResult)}`);
+      console.log(`Total plays result: ${JSON.stringify(totalPlaysResult)}`);
 
-        const totalPlays = totalPlaysResult.length > 0 ? totalPlaysResult[0].totalPlays : 0;
-        const songCount = await Song.countDocuments();
+      const totalPlays = totalPlaysResult.length > 0 ? totalPlaysResult[0].totalPlays : 0;
+      const songCount = await Song.countDocuments();
 
-        const topArtists = await Artist.aggregate([
-            {
-                $lookup: {
-                    from: 'songs',
-                    localField: 'name',
-                    foreignField: 'artist',
-                    as: 'songs'
-                }
+      const topArtists = await Artist.aggregate([
+        {
+          $lookup: {
+            from: 'songs',
+            localField: 'name',
+            foreignField: 'artist',
+            as: 'songs'
+          }
+        },
+        { $unwind: '$songs' },
+        { $unwind: '$songs.plays' },
+        {
+          $addFields: {
+            'songs.plays.monthNumber': {
+              $indexOfArray: [
+                ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+                '$songs.plays.month'
+              ]
+            }
+          }
+        },
+        {
+          $match: {
+            'songs.plays.monthNumber': {
+              $gte: startMonthNumber,
+              $lte: endMonthNumber
+            }
+          }
+        },
+        {
+          $group: {
+            _id: { artistId: '$_id', month: '$songs.plays.month' },
+            name: { $first: '$name' },
+            monthlyPlays: { $sum: '$songs.plays.count' },
+            songs: {
+              $push: {
+                song_id: '$songs._id',
+                title: '$songs.title',
+                plays: '$songs.plays.count'
+              }
+            }
+          }
+        },
+        {
+          $group: {
+            _id: '$_id.artistId',
+            name: { $first: '$name' },
+            monthlyData: {
+              $push: {
+                month: '$_id.month',
+                plays: '$monthlyPlays',
+                songs: '$songs'
+              }
             },
-            { $unwind: '$songs' },
-            { $unwind: '$songs.plays' },
-            {
-                $addFields: {
-                    'songs.plays.monthNumber': {
-                        $indexOfArray: [
-                            ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-                            '$songs.plays.month'
-                        ]
-                    }
-                }
-            },
-            {
-                $match: {
-                    'songs.plays.monthNumber': {
-                        $gte: startMonthNumber,
-                        $lte: endMonthNumber
-                    }
-                }
-            },
-            {
-                $group: {
-                    _id: { artistId: '$_id', month: '$songs.plays.month' },
-                    name: { $first: '$name' },
-                    monthlyPlays: { $sum: '$songs.plays.count' },
-                    songs: {
-                        $push: {
-                            song_id: '$songs._id',
-                            title: '$songs.title',
-                            plays: '$songs.plays.count'
-                        }
-                    }
-                }
-            },
-            {
-                $group: {
-                    _id: '$_id.artistId',
-                    name: { $first: '$name' },
-                    monthlyData: {
-                        $push: {
-                            month: '$_id.month',
-                            plays: '$monthlyPlays',
-                            songs: '$songs'
-                        }
-                    },
-                    total_plays: { $sum: '$monthlyPlays' }
-                }
-            },
-            { $sort: { total_plays: -1 } },
-            { $limit: 10 }
-        ]);
+            total_plays: { $sum: '$monthlyPlays' }
+          }
+        },
+        { $sort: { total_plays: -1 } },
+        { $limit: 10 }
+      ]);
 
-        const result = {
-            start_month,
-            end_month,
-            total_plays: Round(totalPlays, 3),
-            average_plays_per_song: Round((totalPlays / songCount), 3),
-            top_artists: topArtists.map(artist => {
-                const months = artist.monthlyData.map(d => d.month).sort();
-                const firstMonthPlays = artist.monthlyData.find(d => d.month === months[0]).plays;
-                const lastMonthPlays = artist.monthlyData.find(d => d.month === months[months.length - 1]).plays;
-                const growthRatePerMonth = months.length > 1
-                    ? (lastMonthPlays - firstMonthPlays) / firstMonthPlays / (months.length - 1)
-                    : 0;
+      const result = {
+        start_month,
+        end_month,
+        total_plays: Round(totalPlays, 3),
+        average_plays_per_song: Round((totalPlays / songCount), 3),
+        top_artists: topArtists.map(artist => {
+          const months = artist.monthlyData.map(d => d.month).sort();
+          const firstMonthPlays = artist.monthlyData.find(d => d.month === months[0]).plays;
+          const lastMonthPlays = artist.monthlyData.find(d => d.month === months[months.length - 1]).plays;
+          const growthRatePerMonth = months.length > 1
+            ? (lastMonthPlays - firstMonthPlays) / firstMonthPlays / (months.length - 1)
+            : 0;
 
-                const songData = artist.monthlyData.reduce((acc, month) => {
-                    month.songs.forEach(song => {
-                        if (!acc[song.song_id]) {
-                            acc[song.song_id] = { title: song.title, monthlyPlays: {} };
-                        }
-                        acc[song.song_id].monthlyPlays[month.month] = song.plays;
-                    });
-                    return acc;
-                }, {});
+          const songData = artist.monthlyData.reduce((acc, month) => {
+            month.songs.forEach(song => {
+              if (!acc[song.song_id]) {
+                acc[song.song_id] = { title: song.title, monthlyPlays: {} };
+              }
+              acc[song.song_id].monthlyPlays[month.month] = song.plays;
+            });
+            return acc;
+          }, {});
 
-                const topSongs = Object.entries(songData)
-                    .map(([song_id, data]) => {
-                        const songMonths = Object.keys(data.monthlyPlays).sort();
-                        const totalPlays = Object.values(data.monthlyPlays).reduce((sum, plays) => sum + plays, 0);
-                        const firstMonthPlays = data.monthlyPlays[songMonths[0]];
-                        const lastMonthPlays = data.monthlyPlays[songMonths[songMonths.length - 1]];
-                        const songGrowthRate = songMonths.length > 1
-                            ? (lastMonthPlays - firstMonthPlays) / firstMonthPlays / (songMonths.length - 1)
-                            : 0;
+          const topSongs = Object.entries(songData)
+            .map(([song_id, data]) => {
+              const songMonths = Object.keys(data.monthlyPlays).sort();
+              const totalPlays = Object.values(data.monthlyPlays).reduce((sum, plays) => sum + plays, 0);
+              const firstMonthPlays = data.monthlyPlays[songMonths[0]];
+              const lastMonthPlays = data.monthlyPlays[songMonths[songMonths.length - 1]];
+              const songGrowthRate = songMonths.length > 1
+                ? (lastMonthPlays - firstMonthPlays) / firstMonthPlays / (songMonths.length - 1)
+                : 0;
 
-                        return {
-                            title: data.title,
-                            plays: Round(totalPlays, 3),
-                            growth_rate_per_month: Round(songGrowthRate, 3)
-                        };
-                    })
-                    .sort((a, b) => b.plays - a.plays)
-                    .slice(0, 10);
-
-                return {
-                    name: artist.name,
-                    total_plays: Round(artist.total_plays, 3),
-                    average_plays_per_song: Round((artist.total_plays / artist.monthlyData.reduce((sum, month) => sum + month.songs.length, 0)), 3),
-                    growth_rate_per_month: Round(growthRatePerMonth, 3),
-                    top_songs: topSongs
-                };
+              return {
+                title: data.title,
+                plays: Round(totalPlays, 3),
+                growth_rate_per_month: Round(songGrowthRate, 3)
+              };
             })
-        };
+            .sort((a, b) => b.plays - a.plays)
+            .slice(0, 10);
 
-        callback(null, result);
+          return {
+            name: artist.name,
+            total_plays: Round(artist.total_plays, 3),
+            average_plays_per_song: Round((artist.total_plays / artist.monthlyData.reduce((sum, month) => sum + month.songs.length, 0)), 3),
+            growth_rate_per_month: Round(growthRatePerMonth, 3),
+            top_songs: topSongs
+          };
+        })
+      };
+
+      callback(null, result);
     } catch (error) {
-        console.error('Error in GetTrendsByPeriod:', error);
-        callback({
-            code: grpc.status.INTERNAL,
-            details: "Internal server error"
-        });
+      console.error('Error in GetTrendsByPeriod:', error);
+      callback({
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
+      });
     }
-},
+  },
 
   GetTrendingSongs: async (call, callback) => {
     const { months } = call.request;
@@ -356,18 +359,19 @@ const trendService = {
     } catch (error) {
       console.error('Error in GetTrendingSongs:', error);
       callback({
-        code: grpc.status.INTERNAL,
-        details: "Internal server error"
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
       });
     }
   },
 
   GetTrendingArtists: async (call, callback) => {
-    const { months } = call.request; 
+    const { months } = call.request;
     try {
       const currentMonth = moment().month();
       const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - 1 - i).format('MMMM'));
-  
+
       const trendingArtists = await Artist.aggregate([
         { $unwind: '$plays' },
         { $match: { 'plays.month': { $in: monthsToInclude } } },
@@ -411,37 +415,38 @@ const trendService = {
         { $sort: { totalPlays: -1 } },
         { $limit: 10 } // Ensure we only get the top 10 artists
       ]);
-  
+
       const roundedTrendingArtists = trendingArtists.map(artist => ({
         name: artist.name,
         total_plays: artist.totalPlays,
         growth_rate_per_month: Round(artist.growthRate, 3)
       }));
-  
+
       callback(null, { artists: roundedTrendingArtists });
     } catch (error) {
       console.error('Error in GetTrendingArtists:', error);
       callback({
-        code: grpc.status.INTERNAL,
-        details: "Internal server error"
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
       });
     }
   },
-  
+
   GetTrendingAlbums: async (call, callback) => {
     const { months } = call.request;
-  
+
     if (months > 12 || months < 1) {
       return callback({
         code: grpc.status.INVALID_ARGUMENT,
         details: "Months parameter must be between 1 and 12"
       });
     }
-  
+
     try {
       const currentMonth = moment().month();
       const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - 1 - i).format('MMMM'));
-  
+
       const trendingAlbums = await Album.aggregate([
         { $unwind: '$plays' },
         { $match: { 'plays.month': { $in: monthsToInclude } } },
@@ -487,23 +492,24 @@ const trendService = {
         { $sort: { totalPlays: -1 } },
         { $limit: 10 } // Ensure we only get the top 10 albums
       ]);
-  
+
       const roundedTrendingAlbums = trendingAlbums.map(album => ({
         name: album.name,
         artist: album.artist,
         total_plays: album.totalPlays,
         growth_rate_per_month: Round(album.growthRate, 3)
       }));
-  
+
       callback(null, { albums: roundedTrendingAlbums });
     } catch (error) {
       console.error('Error in GetTrendingAlbums:', error);
       callback({
-        code: grpc.status.INTERNAL,
-        details: "Internal server error"
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'INTERNAL'
       });
     }
-  }  
+  }
 };
 
 module.exports = trendService;

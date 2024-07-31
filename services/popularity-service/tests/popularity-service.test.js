@@ -13,7 +13,7 @@ jest.mock('@grpc/grpc-js', () => ({
   }
 }));
 
-// Mock the Song model
+// Mock the DB
 jest.mock('../src/db', () => ({
   Song: {
     aggregate: jest.fn(),
