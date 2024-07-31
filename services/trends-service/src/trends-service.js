@@ -435,19 +435,10 @@ const trendService = {
   },
 
   GetTrendingAlbums: async (call, callback) => {
-    const { months } = call.request;
-
-    if (months > 12 || months < 1) {
-      return callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        details: "Months parameter must be between 1 and 12"
-      });
-    }
-
-    try {
+    const { months, limit } = call.request;try {
       const currentMonth = moment().month();
       const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - 1 - i).format('MMMM'));
-
+  
       const trendingAlbums = await Album.aggregate([
         { $unwind: '$plays' },
         { $match: { 'plays.month': { $in: monthsToInclude } } },
@@ -491,16 +482,16 @@ const trendService = {
           }
         },
         { $sort: { totalPlays: -1 } },
-        { $limit: 10 } // Ensure we only get the top 10 albums
+        { $limit: limit } // Use the safe limit value
       ]);
-
+  
       const roundedTrendingAlbums = trendingAlbums.map(album => ({
         name: album.name,
         artist: album.artist,
         total_plays: album.totalPlays,
         growth_rate_per_month: Round(album.growthRate, 3)
       }));
-
+  
       callback(null, { albums: roundedTrendingAlbums });
     } catch (error) {
       console.error('Error in GetTrendingAlbums:', error);

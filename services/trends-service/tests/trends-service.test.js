@@ -1,6 +1,6 @@
 // File: services/trends-service/tests/trends-service.test.js
 const trendsService = require('../src/trends-service');
-const { Song, Artist } = require('../src/db');
+const { Song, Artist, Album } = require('../src/db');
 
 jest.mock('@grpc/grpc-js', () => ({
   Server: jest.fn().mockImplementation(() => ({
@@ -24,6 +24,9 @@ jest.mock('../src/db', () => ({
     countDocuments: jest.fn()
   },
   Artist: {
+    aggregate: jest.fn()
+  },
+  Album: {
     aggregate: jest.fn()
   }
 }));
@@ -136,7 +139,7 @@ describe('Trends Service - GetTrendsByPeriod', () => {
   test('successfully retrieves trends for a given period', async () => {
     // Mock Song.aggregate for total plays
     Song.aggregate.mockResolvedValueOnce([{ totalPlays: 9111 }]);
-    
+
     // Mock Song.countDocuments
     Song.countDocuments.mockResolvedValueOnce(172);
 
@@ -492,5 +495,107 @@ describe('Trends Service - GetTrendingArtists', () => {
     const aggregateCall = Artist.aggregate.mock.calls[0][0];
     const matchStage = aggregateCall.find(stage => stage.$match);
     expect(matchStage.$match['plays.month'].$in).toHaveLength(3);
+  });
+});
+
+// GetTrendingAlbums
+describe('Trends Service - GetTrendingAlbums', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('successfully retrieves trending albums with default limit when limit is not provided', async () => {
+    const mockTrendingAlbums = [
+      { name: 'Lover', artist: 'Taylor Swift', totalPlays: 2147, growthRate: -0.118 },
+      { name: 'Folklore', artist: 'Taylor Swift', totalPlays: 1712, growthRate: 0.093 },
+      { name: 'Fearless', artist: 'Taylor Swift', totalPlays: 1661, growthRate: -0.073 },
+      { name: 'Speak Now', artist: 'Taylor Swift', totalPlays: 1575, growthRate: 0.351 },
+      { name: 'Reputation', artist: 'Taylor Swift', totalPlays: 1536, growthRate: -0.053 }
+    ];
+
+    Album.aggregate.mockResolvedValueOnce(mockTrendingAlbums);
+
+    const mockCall = { request: { months: 3 } };  // No limit specified
+    const mockCallback = jest.fn();
+
+    await trendsService.GetTrendingAlbums(mockCall, mockCallback);
+
+    expect(Album.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith(null, {
+      albums: expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Lover',
+          artist: 'Taylor Swift',
+          total_plays: 2147,
+          growth_rate_per_month: -0.118
+        }),
+        expect.objectContaining({
+          name: 'Reputation',
+          artist: 'Taylor Swift',
+          total_plays: 1536,
+          growth_rate_per_month: -0.053
+        })
+      ])
+    });
+    expect(mockCallback.mock.calls[0][1].albums).toHaveLength(5);
+  });
+
+  test('respects user-provided limit when it is a positive integer', async () => {
+    const mockTrendingAlbums = [
+      { name: 'Lover', artist: 'Taylor Swift', totalPlays: 2147, growthRate: -0.118 },
+      { name: 'Folklore', artist: 'Taylor Swift', totalPlays: 1712, growthRate: 0.093 },
+      { name: 'Fearless', artist: 'Taylor Swift', totalPlays: 1661, growthRate: -0.073 }
+    ];
+
+    Album.aggregate.mockResolvedValueOnce(mockTrendingAlbums);
+
+    const mockCall = { request: { months: 3, limit: 3 } };
+    const mockCallback = jest.fn();
+
+    await trendsService.GetTrendingAlbums(mockCall, mockCallback);
+
+    expect(mockCallback).toHaveBeenCalledWith(null, {
+      albums: expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Lover',
+          artist: 'Taylor Swift',
+          total_plays: 2147,
+          growth_rate_per_month: -0.118
+        }),
+        expect.objectContaining({
+          name: 'Fearless',
+          artist: 'Taylor Swift',
+          total_plays: 1661,
+          growth_rate_per_month: -0.073
+        })
+      ])
+    });
+    expect(mockCallback.mock.calls[0][1].albums).toHaveLength(3);
+  });
+
+  test('handles error gracefully', async () => {
+    Album.aggregate.mockRejectedValueOnce(new Error('Database error'));
+
+    const mockCall = { request: { months: 3, limit: 10 } };
+    const mockCallback = jest.fn();
+
+    await trendsService.GetTrendingAlbums(mockCall, mockCallback);
+
+    expect(mockCallback).toHaveBeenCalledWith(expect.objectContaining({
+      code: 500,
+      message: 'Internal Server Error',
+      status: 'INTERNAL'
+    }));
+  });
+
+  test('handles empty results', async () => {
+    Album.aggregate.mockResolvedValueOnce([]);
+
+    const mockCall = { request: { months: 3, limit: 10 } };
+    const mockCallback = jest.fn();
+
+    await trendsService.GetTrendingAlbums(mockCall, mockCallback);
+
+    expect(mockCallback).toHaveBeenCalledWith(null, { albums: [] });
   });
 });

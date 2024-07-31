@@ -36,6 +36,7 @@ message TrendingArtistsRequest {
 
 message TrendingAlbumsRequest {
   int32 months = 1;
+  int32 limit = 2;
 }
 
 message OverallTrends {
