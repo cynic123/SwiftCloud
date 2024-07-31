@@ -299,7 +299,7 @@ const trendService = {
   },
 
   GetTrendingSongs: async (call, callback) => {
-    const { months, limit } = call.request;  // Default limit to 10 if not provided
+    const { months, limit } = call.request;
     try {
       const currentMonth = moment().month();
       const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - 1 - i).format('MMMM'));
@@ -368,11 +368,11 @@ const trendService = {
   },
 
   GetTrendingArtists: async (call, callback) => {
-    const { months } = call.request;
+    const { months, limit } = call.request;
     try {
       const currentMonth = moment().month();
       const monthsToInclude = Array.from({ length: months }, (_, i) => moment().month(currentMonth - 1 - i).format('MMMM'));
-
+  
       const trendingArtists = await Artist.aggregate([
         { $unwind: '$plays' },
         { $match: { 'plays.month': { $in: monthsToInclude } } },
@@ -414,15 +414,15 @@ const trendService = {
           }
         },
         { $sort: { totalPlays: -1 } },
-        { $limit: 10 } // Ensure we only get the top 10 artists
+        { $limit: limit } // Use the safe limit value
       ]);
-
+  
       const roundedTrendingArtists = trendingArtists.map(artist => ({
         name: artist.name,
         total_plays: artist.totalPlays,
         growth_rate_per_month: Round(artist.growthRate, 3)
       }));
-
+  
       callback(null, { artists: roundedTrendingArtists });
     } catch (error) {
       console.error('Error in GetTrendingArtists:', error);

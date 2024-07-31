@@ -383,3 +383,114 @@ describe('Trends Service - GetTrendingSongs', () => {
     expect(matchStage.$match['plays.month'].$in).toHaveLength(3);
   });
 });
+
+// GetTrendingArtists
+describe('Trends Service - GetTrendingArtists', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('successfully retrieves trending artists with default limit when limit is not provided', async () => {
+    const mockTrendingArtists = [
+      { name: 'Taylor Swift', totalPlays: 16270, growthRate: 0.009 },
+      { name: 'Zayn and Taylor Swift', totalPlays: 204, growthRate: -0.019 },
+      { name: 'Jack Ingram\nfeaturing Taylor Swift', totalPlays: 200, growthRate: 0.198 },
+      { name: 'B.o.B\nfeaturing Taylor Swift', totalPlays: 199, growthRate: -0.087 },
+      { name: 'Taylor Swift\nfeaturing Dixie Chicks', totalPlays: 188, growthRate: -0.291 }
+    ];
+
+    Artist.aggregate.mockResolvedValueOnce(mockTrendingArtists);
+
+    const mockCall = { request: { months: 3 } };  // No limit specified
+    const mockCallback = jest.fn();
+
+    await trendsService.GetTrendingArtists(mockCall, mockCallback);
+
+    expect(Artist.aggregate).toHaveBeenCalledTimes(1);
+    expect(mockCallback).toHaveBeenCalledWith(null, {
+      artists: expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Taylor Swift',
+          total_plays: 16270,
+          growth_rate_per_month: expect.any(Number)
+        }),
+        expect.objectContaining({
+          name: 'Taylor Swift\nfeaturing Dixie Chicks',
+          total_plays: 188,
+          growth_rate_per_month: expect.any(Number)
+        })
+      ])
+    });
+    expect(mockCallback.mock.calls[0][1].artists).toHaveLength(5);
+  });
+
+  test('respects user-provided limit when it is a positive integer', async () => {
+    const mockTrendingArtists = [
+      { name: 'Taylor Swift', totalPlays: 16270, growthRate: 0.009 },
+      { name: 'Zayn and Taylor Swift', totalPlays: 204, growthRate: -0.019 },
+      { name: 'Jack Ingram\nfeaturing Taylor Swift', totalPlays: 200, growthRate: 0.198 }
+    ];
+
+    Artist.aggregate.mockResolvedValueOnce(mockTrendingArtists);
+
+    const mockCall = { request: { months: 3, limit: 3 } };
+    const mockCallback = jest.fn();
+
+    await trendsService.GetTrendingArtists(mockCall, mockCallback);
+
+    expect(mockCallback).toHaveBeenCalledWith(null, {
+      artists: expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Taylor Swift',
+          total_plays: 16270,
+          growth_rate_per_month: expect.any(Number)
+        }),
+        expect.objectContaining({
+          name: 'Jack Ingram\nfeaturing Taylor Swift',
+          total_plays: 200,
+          growth_rate_per_month: expect.any(Number)
+        })
+      ])
+    });
+    expect(mockCallback.mock.calls[0][1].artists).toHaveLength(3);
+  });
+
+  test('handles error gracefully', async () => {
+    Artist.aggregate.mockRejectedValueOnce(new Error('Database error'));
+
+    const mockCall = { request: { months: 3, limit: 10 } };
+    const mockCallback = jest.fn();
+
+    await trendsService.GetTrendingArtists(mockCall, mockCallback);
+
+    expect(mockCallback).toHaveBeenCalledWith(expect.objectContaining({
+      code: 500,
+      message: 'Internal Server Error',
+      status: 'INTERNAL'
+    }));
+  });
+
+  test('handles empty results', async () => {
+    Artist.aggregate.mockResolvedValueOnce([]);
+
+    const mockCall = { request: { months: 3, limit: 10 } };
+    const mockCallback = jest.fn();
+
+    await trendsService.GetTrendingArtists(mockCall, mockCallback);
+
+    expect(mockCallback).toHaveBeenCalledWith(null, { artists: [] });
+  });
+
+  test('correctly calculates months to include', async () => {
+    Artist.aggregate.mockResolvedValueOnce([]);
+
+    const mockCall = { request: { months: 3, limit: 10 } };
+    const mockCallback = jest.fn();
+
+    await trendsService.GetTrendingArtists(mockCall, mockCallback);
+
+    const aggregateCall = Artist.aggregate.mock.calls[0][0];
+    const matchStage = aggregateCall.find(stage => stage.$match);
+    expect(matchStage.$match['plays.month'].$in).toHaveLength(3);
+  });
+});

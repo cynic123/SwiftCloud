@@ -130,7 +130,7 @@ router.get('/songs', (req, res) => {
 
 // Get trending artists of the last n month(s) requested by user
 router.get('/artists', (req, res) => {
-	const { months } = req.query;
+	const { months, limit = 50 } = req.query;
 	console.log(`Received trending artists request with months: "${months}"`);
 
 	// Validation
@@ -143,7 +143,10 @@ router.get('/artists', (req, res) => {
 	if (months < 1 || months > 12)
 		return res.status(400).json({ error: 'months parameter must be a number between 1 and 12' });
 
-	client.GetTrendingArtists({ months }, (err, response) => {
+	if (limit && isNaN(limit))
+		return res.status(400).json({ error: 'limit parameter must be number' });
+
+	client.GetTrendingArtists({ months, limit }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);
 			return res.status(500).json({ error: 'Internal Server Error' });
