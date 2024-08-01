@@ -24,7 +24,7 @@ jest.mock('../src/db', () => ({
     find: jest.fn()
   },
   Artist: {
-    aggregate: jest.fn() 
+    aggregate: jest.fn()
   }
 }));
 
@@ -37,8 +37,8 @@ describe('Popularity Service - HealthCheck', () => {
   });
 });
 
-// Get Most Popular Songs
-describe('Popularity Service - Get Most Popular Songs', () => {
+// Get Most Popular Songs Monthly Wise
+describe('Popularity Service - GetMostPopularSongsMonthly', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -56,10 +56,10 @@ describe('Popularity Service - Get Most Popular Songs', () => {
 
     Song.aggregate.mockResolvedValue(mockResponse);
 
-    const mockCall = { request: { period: 'monthly', limit: 50, offset: 0 } };
+    const mockCall = { request: { limit: 50, offset: 0 } };
     const mockCallback = jest.fn();
 
-    await popularityService.GetMostPopularSongs(mockCall, mockCallback);
+    await popularityService.GetMostPopularSongsMonthly(mockCall, mockCallback);
 
     expect(Song.aggregate).toHaveBeenCalled();
     expect(mockCallback).toHaveBeenCalledWith(null, {
@@ -71,60 +71,39 @@ describe('Popularity Service - Get Most Popular Songs', () => {
     });
   });
 
-  test('successfully retrieves most popular songs for all_time period', async () => {
-    const mockResponse = [
-      { title: 'Song 1', artist: 'Artist 1', play_count: 100, rank: 1 },
-      { title: 'Song 2', artist: 'Artist 2', play_count: 80, rank: 2 }
-    ];
-
-    Song.aggregate.mockResolvedValue(mockResponse);
-
-    const mockCall = { request: { period: 'all_time', limit: 50, offset: 0 } };
-    const mockCallback = jest.fn();
-
-    await popularityService.GetMostPopularSongs(mockCall, mockCallback);
-
-    expect(Song.aggregate).toHaveBeenCalled();
-    expect(mockCallback).toHaveBeenCalledWith(null, { songs: mockResponse });
-  });
-
   test('returns empty array when no songs match the query for monthly period', async () => {
     Song.aggregate.mockResolvedValue([]);
 
-    const mockCall = { request: { period: 'monthly', limit: 50, offset: 0 } };
+    const mockCall = { request: { limit: 50, offset: 0 } };
     const mockCallback = jest.fn();
 
-    await popularityService.GetMostPopularSongs(mockCall, mockCallback);
+    await popularityService.GetMostPopularSongsMonthly(mockCall, mockCallback);
 
     expect(Song.aggregate).toHaveBeenCalled();
-    expect(mockCallback).toHaveBeenCalledWith(new Error('No data found'), null);
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 404,
+      message: 'No songs found',
+      status: 'NOT_FOUND'
+    });
   });
 
-  test('returns empty array when no songs match the query for all_time period', async () => {
-    Song.aggregate.mockResolvedValue([]);
-
-    const mockCall = { request: { period: 'all_time', limit: 50, offset: 0 } };
-    const mockCallback = jest.fn();
-
-    await popularityService.GetMostPopularSongs(mockCall, mockCallback);
-
-    expect(Song.aggregate).toHaveBeenCalled();
-    expect(mockCallback).toHaveBeenCalledWith(new Error('No data found'), null);
-  });
-
-  test('handles database query error in GetMostPopularSongs', async () => {
+  test('handles database query error in GetMostPopularSongsMonthly', async () => {
     Song.aggregate.mockRejectedValue(new Error('Database error'));
 
-    const mockCall = { request: { period: 'all_time', limit: 50, offset: 0 } };
+    const mockCall = { request: { limit: 50, offset: 0 } };
     const mockCallback = jest.fn();
 
-    await popularityService.GetMostPopularSongs(mockCall, mockCallback);
+    await popularityService.GetMostPopularSongsMonthly(mockCall, mockCallback);
 
     expect(Song.aggregate).toHaveBeenCalled();
-    expect(mockCallback).toHaveBeenCalledWith(new Error('Database error'), null);
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 500,
+      message: 'Internal Server Error',
+      status: 'INTERNAL'
+    });
   });
 
-  test('uses default offset when not provided for monthly period', async () => {
+  test('uses default limit and offset when not provided for monthly period', async () => {
     const mockResponse = [
       {
         month: 'June',
@@ -137,10 +116,10 @@ describe('Popularity Service - Get Most Popular Songs', () => {
 
     Song.aggregate.mockResolvedValue(mockResponse);
 
-    const mockCall = { request: { period: 'monthly', limit: 50 } };
+    const mockCall = { request: {} };
     const mockCallback = jest.fn();
 
-    await popularityService.GetMostPopularSongs(mockCall, mockCallback);
+    await popularityService.GetMostPopularSongsMonthly(mockCall, mockCallback);
 
     expect(Song.aggregate).toHaveBeenCalled();
     expect(mockCallback).toHaveBeenCalledWith(null, {
@@ -151,8 +130,15 @@ describe('Popularity Service - Get Most Popular Songs', () => {
       }
     });
   });
+});
 
-  test('uses default offset when not provided for all_time period', async () => {
+// Get Most Popular Songs All Time
+describe('Popularity Service - GetMostPopularSongsAllTime', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('successfully retrieves most popular songs for all_time period', async () => {
     const mockResponse = [
       { title: 'Song 1', artist: 'Artist 1', play_count: 100, rank: 1 },
       { title: 'Song 2', artist: 'Artist 2', play_count: 80, rank: 2 }
@@ -160,10 +146,59 @@ describe('Popularity Service - Get Most Popular Songs', () => {
 
     Song.aggregate.mockResolvedValue(mockResponse);
 
-    const mockCall = { request: { period: 'all_time', limit: 50 } };
+    const mockCall = { request: { limit: 50, offset: 0 } };
     const mockCallback = jest.fn();
 
-    await popularityService.GetMostPopularSongs(mockCall, mockCallback);
+    await popularityService.GetMostPopularSongsAllTime(mockCall, mockCallback);
+
+    expect(Song.aggregate).toHaveBeenCalled();
+    expect(mockCallback).toHaveBeenCalledWith(null, { songs: mockResponse });
+  });
+
+  test('returns empty array when no songs match the query for all_time period', async () => {
+    Song.aggregate.mockResolvedValue([]);
+
+    const mockCall = { request: { limit: 50, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularSongsAllTime(mockCall, mockCallback);
+
+    expect(Song.aggregate).toHaveBeenCalled();
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 404,
+      message: 'No songs found',
+      status: 'NOT_FOUND'
+    });
+  });
+
+  test('handles database query error in GetMostPopularSongsAllTime', async () => {
+    Song.aggregate.mockRejectedValue(new Error('Database error'));
+
+    const mockCall = { request: { limit: 50, offset: 0 } };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularSongsAllTime(mockCall, mockCallback);
+
+    expect(Song.aggregate).toHaveBeenCalled();
+    expect(mockCallback).toHaveBeenCalledWith({
+      code: 500,
+      message: 'Internal Server Error',
+      status: 'INTERNAL'
+    });
+  });
+
+  test('uses default limit and offset when not provided for all_time period', async () => {
+    const mockResponse = [
+      { title: 'Song 1', artist: 'Artist 1', play_count: 100, rank: 1 },
+      { title: 'Song 2', artist: 'Artist 2', play_count: 80, rank: 2 }
+    ];
+
+    Song.aggregate.mockResolvedValue(mockResponse);
+
+    const mockCall = { request: {} };
+    const mockCallback = jest.fn();
+
+    await popularityService.GetMostPopularSongsAllTime(mockCall, mockCallback);
 
     expect(Song.aggregate).toHaveBeenCalled();
     expect(mockCallback).toHaveBeenCalledWith(null, { songs: mockResponse });
@@ -682,7 +717,7 @@ describe('Popularity Service - GetMostPopularArtistsAllTime', () => {
 
     expect(Artist.aggregate).toHaveBeenCalledTimes(1);
     expect(mockCallback).toHaveBeenCalledWith(null, mockAggregateResult[0]);
-    
+
     // Check if the aggregation pipeline includes correct limit and offset
     const aggregationPipeline = Artist.aggregate.mock.calls[0][0];
     const projectStage = aggregationPipeline.find(stage => stage.$project);
@@ -742,7 +777,7 @@ describe('Popularity Service - GetMostPopularArtistsAllTime', () => {
 
     expect(Artist.aggregate).toHaveBeenCalledTimes(1);
     expect(mockCallback).toHaveBeenCalledWith(null, mockAggregateResult[0]);
-    
+
     // Check if the aggregation pipeline uses default limit and offset
     const aggregationPipeline = Artist.aggregate.mock.calls[0][0];
     const projectStage = aggregationPipeline.find(stage => stage.$project);
