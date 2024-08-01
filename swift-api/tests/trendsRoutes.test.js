@@ -649,4 +649,170 @@ describe('Popularity Routes', () => {
       expect(response.body).toEqual({ error: 'Internal Server Error' });
     });
   });
+
+  describe('GET /albums', () => {
+    it('should return trending albums for valid parameters', async () => {
+      const mockResponse = [
+        {
+          name: "Lover",
+          artist: "Taylor Swift",
+          total_plays: 2147,
+          growth_rate_per_month: -0.11800000071525574
+        },
+        {
+          name: "Folklore",
+          artist: "Taylor Swift",
+          total_plays: 1712,
+          growth_rate_per_month: 0.09300000220537186
+        }
+      ];
+
+      const mockRouter = trendsRoutes();
+      mockRouter.get('/albums', (req, res) => {
+        res.json(mockResponse);
+      });
+
+      const response = await request(app)
+        .get('/api/trends/albums')
+        .query({ months: 3, limit: 2 })
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          name: expect.any(String),
+          artist: expect.any(String),
+          total_plays: expect.any(Number),
+          growth_rate_per_month: expect.any(Number)
+        })
+      ]));
+      expect(response.body).toHaveLength(2);
+    });
+
+    it('should return 400 if months parameter is missing', async () => {
+      const mockRouter = trendsRoutes();
+      mockRouter.get('/albums', (req, res) => {
+        if (!req.query.months) {
+          return res.status(400).json({ error: 'months parameter is required' });
+        }
+        res.json([]);
+      });
+
+      const response = await request(app)
+        .get('/api/trends/albums')
+        .query({ limit: 50 })
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'months parameter is required' });
+    });
+
+    it('should return 400 if months is not a number', async () => {
+      const mockRouter = trendsRoutes();
+      mockRouter.get('/albums', (req, res) => {
+        if (isNaN(req.query.months)) {
+          return res.status(400).json({ error: 'months parameter must be number' });
+        }
+        res.json([]);
+      });
+
+      const response = await request(app)
+        .get('/api/trends/albums')
+        .query({ months: 'three', limit: 50 })
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'months parameter must be number' });
+    });
+
+    it('should return 400 if months is less than 1', async () => {
+      const mockRouter = trendsRoutes();
+      mockRouter.get('/albums', (req, res) => {
+        if (req.query.months < 1) {
+          return res.status(400).json({ error: 'months parameter must be a number between 1 and 12' });
+        }
+        res.json([]);
+      });
+
+      const response = await request(app)
+        .get('/api/trends/albums')
+        .query({ months: 0, limit: 50 })
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'months parameter must be a number between 1 and 12' });
+    });
+
+    it('should return 400 if months is greater than 12', async () => {
+      const mockRouter = trendsRoutes();
+      mockRouter.get('/albums', (req, res) => {
+        if (req.query.months > 12) {
+          return res.status(400).json({ error: 'months parameter must be a number between 1 and 12' });
+        }
+        res.json([]);
+      });
+
+      const response = await request(app)
+        .get('/api/trends/albums')
+        .query({ months: 13, limit: 50 })
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'months parameter must be a number between 1 and 12' });
+    });
+
+    it('should return 400 if limit is not a number', async () => {
+      const mockRouter = trendsRoutes();
+      mockRouter.get('/albums', (req, res) => {
+        if (req.query.limit && isNaN(req.query.limit)) {
+          return res.status(400).json({ error: 'limit parameter must be number' });
+        }
+        res.json([]);
+      });
+
+      const response = await request(app)
+        .get('/api/trends/albums')
+        .query({ months: 3, limit: 'fifty' })
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'limit parameter must be number' });
+    });
+
+    it('should use default limit if not provided', async () => {
+      const mockRouter = trendsRoutes();
+      mockRouter.get('/albums', (req, res) => {
+        const limit = req.query.limit || 50;
+        res.json(Array(parseInt(limit)).fill({
+          name: "Test Album",
+          artist: "Test Artist",
+          total_plays: 1000,
+          growth_rate_per_month: 0.1
+        }));
+      });
+
+      const response = await request(app)
+        .get('/api/trends/albums')
+        .query({ months: 3 })
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toHaveLength(50);
+    });
+
+    it('should return 500 for internal server error', async () => {
+      const mockRouter = trendsRoutes();
+      mockRouter.get('/albums', (req, res) => {
+        res.status(500).json({ error: 'Internal Server Error' });
+      });
+
+      const response = await request(app)
+        .get('/api/trends/albums')
+        .query({ months: 3, limit: 50 })
+        .expect('Content-Type', /json/)
+        .expect(500);
+
+      expect(response.body).toEqual({ error: 'Internal Server Error' });
+    });
+  });
 });
