@@ -3,7 +3,6 @@ syntax = "proto3";
 package popularity;
 
 service PopularityService {
-  rpc GetMostPopularSongs (PopularityRequest) returns (PopularSongsResponse) {}
   rpc GetMostPopularSongsMonthly (PopularityRequest) returns (PopularMonthlySongsResponse) {}
   rpc GetMostPopularSongsAllTime (PopularityRequest) returns (PopularAllTimeSongsResponse) {}
   rpc GetSongPopularity (SongPopularityRequest) returns (SongPopularityResponse) {}
@@ -57,10 +56,6 @@ message PopularAllTimeSongsResponse {
 
 message SongList {
   repeated SongPopularity songs = 1;
-}
-
-message PopularSongsResponse {
-  map<string, SongList> months = 1;
 }
 
 message SongPopularityResponse {
