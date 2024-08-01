@@ -31,7 +31,8 @@ router.get('/health', (req, res) => {
 	});
 });
 
-router.get('/', (req, res) => {
+// Get all songs
+router.get('/all', (req, res) => {
 	client.GetAllSongs({}, (err, response) => {
 		if (err) {
 			console.error('Error:', err);
@@ -41,6 +42,7 @@ router.get('/', (req, res) => {
 	});
 });
 
+// Get songs by year
 router.get('/year/:year', (req, res) => {
 	const year = req.params.year;
 	console.log(`Received request with year: "${year}"`);
@@ -64,6 +66,7 @@ router.get('/year/:year', (req, res) => {
 	});
 });
 
+// Get songs by artist
 router.get('/artist/:artist', (req, res) => {
 	const artist = req.params.artist;
 	console.log(`Received request with artist: "${artist}"`);
@@ -81,6 +84,7 @@ router.get('/artist/:artist', (req, res) => {
 	});
 });
 
+// Get songs by writer
 router.get('/writer/:writer', (req, res) => {
 	const writer = req.params.writer;
 	console.log(`Received request with writer: "${writer}"`);
@@ -98,6 +102,7 @@ router.get('/writer/:writer', (req, res) => {
 	});
 });
 
+// Get songs by album
 router.get('/album/:album', (req, res) => {
 	const album = req.params.album;
 	console.log(`Received request with album: "${album}"`);
@@ -115,6 +120,7 @@ router.get('/album/:album', (req, res) => {
 	});
 });
 
+// Get songs by month
 router.get('/month/:month', (req, res) => {
 	const month = req.params.month;
 	console.log(`Received request with month: "${month}"`);
