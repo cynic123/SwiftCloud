@@ -4,6 +4,8 @@ package popularity;
 
 service PopularityService {
   rpc GetMostPopularSongs (PopularityRequest) returns (PopularSongsResponse) {}
+  rpc GetMostPopularSongsMonthly (PopularityRequest) returns (PopularMonthlySongsResponse) {}
+  rpc GetMostPopularSongsAllTime (PopularityRequest) returns (PopularAllTimeSongsResponse) {}
   rpc GetSongPopularity (SongPopularityRequest) returns (SongPopularityResponse) {}
   rpc GetMostPopularAlbumsMonthly (PopularityRequest) returns (PopularMonthlyAlbumsResponse) {}
   rpc GetMostPopularAlbumsAllTime (PopularityRequest) returns (PopularAllTimeAlbumsResponse) {}
@@ -43,6 +45,14 @@ message SongPopularity {
   string artist = 2;
   int32 play_count = 3;
   int32 rank = 4;
+}
+
+message PopularMonthlySongsResponse {
+  map<string, SongList> months = 1;
+}
+
+message PopularAllTimeSongsResponse {
+  repeated SongPopularity songs = 1;
 }
 
 message SongList {
