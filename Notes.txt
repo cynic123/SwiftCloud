@@ -58,30 +58,886 @@ Factors Affecting the Score:
 3. Document length: Longer documents might have lower scores for the same term frequency.
 4. Exact matches vs partial matches: Exact phrase matches typically score higher.
 
-swift-api: gRPC error: Error: 2 UNKNOWN: Aggregate has empty pipeline
-swift-api:     at callErrorFromStatus (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/call.js:31:19)
-swift-api:     at Object.onReceiveStatus (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/client.js:193:76)
-swift-api:     at Object.onReceiveStatus (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/client-interceptors.js:360:141)
-swift-api:     at Object.onReceiveStatus (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/client-interceptors.js:323:181)
-swift-api:     at /Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/resolving-call.js:129:78
-swift-api:     at process.processTicksAndRejections (node:internal/process/task_queues:77:11)
-swift-api: for call at
-swift-api:     at ServiceClientImpl.makeUnaryRequest (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/client.js:161:32)
-swift-api:     at ServiceClientImpl.<anonymous> (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/@grpc/grpc-js/build/src/make-client.js:105:19)
-swift-api:     at /Users/prithwish.samanta/workspace/SwiftCloud/swift-api/src/routes/popularityRoutes.js:38:12
-swift-api:     at Layer.handle [as handle_request] (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/layer.js:95:5)
-swift-api:     at next (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/route.js:149:13)
-swift-api:     at Route.dispatch (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/route.js:119:3)
-swift-api:     at Layer.handle [as handle_request] (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/layer.js:95:5)
-swift-api:     at /Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/index.js:284:15
-swift-api:     at Function.process_params (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/index.js:346:12)
-swift-api:     at next (/Users/prithwish.samanta/workspace/SwiftCloud/swift-api/node_modules/express/lib/router/index.js:280:10) {
-swift-api:   code: 2,
-swift-api:   details: 'Aggregate has empty pipeline',
-swift-api:   metadata: Metadata {
-swift-api:     internalRepr: Map(2) { 'content-type' => [Array], 'date' => [Array] },
-swift-api:     options: {}
-swift-api:   }
-swift-api: }
 
-//TODO: Search service advamced search requires input validation and fix for all time query.
+.
+├── Notes.txt
+├── README.md
+├── deploy.sh
+├── jest.config.js
+├── lerna.json
+├── package.json
+├── proto
+│   ├── popularity.proto
+│   ├── search.proto
+│   ├── song.proto
+│   └── trend.proto
+├── services
+│   ├── popularity-service
+│   │   ├── ecosystem.config.js
+│   │   ├── jest.config.js
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── db.js
+│   │   │   ├── popularity-service.js
+│   │   │   └── server.js
+│   │   └── tests
+│   │       └── popularity-service.test.js
+│   ├── search-service
+│   │   ├── ecosystem.config.js
+│   │   ├── jest.config.js
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── db.js
+│   │   │   ├── search-service.js
+│   │   │   └── server.js
+│   │   └── tests
+│   │       └── search-service.test.js
+│   ├── songs-service
+│   │   ├── ecosystem.config.js
+│   │   ├── jest.config.js
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── db.js
+│   │   │   ├── server.js
+│   │   │   └── songs-service.js
+│   │   └── tests
+│   │       └── songs-service.test.js
+│   └── trends-service
+│       ├── ecosystem.config.js
+│       ├── jest.config.js
+│       ├── package.json
+│       ├── src
+│       │   ├── db.js
+│       │   ├── server.js
+│       │   └── trends-service.js
+│       └── tests
+│           └── trends-service.test.js
+├── swift-api
+│   ├── ecosystem.config.js
+│   ├── jest.config.js
+│   ├── package.json
+│   ├── src
+│   │   ├── routes
+│   │   │   ├── popularityRoutes.js
+│   │   │   ├── searchRoutes.js
+│   │   │   ├── songsRoutes.js
+│   │   │   └── trendsRoutes.js
+│   │   └── server.js
+│   └── tests
+│       ├── searchRoutes.test.js
+│       └── songsRoutes.test.js
+└── utils
+    ├── SwiftCloud-Sheet1.csv
+    ├── commonUtils.js
+    └── importData.js
+
+26 directories, 93 files
+
+Now i'm testing swift-api, which have different route handlers named, songsRoutes.js, searchRoutes.js, popularityRoutes.js and trendsRoutes.js. For testing, I want to have different test files for each route handlers. I have managed to create a successful test file for songs endpoints called songsRoutes.test.js! It tests all the express API endpoints implemented in the songsRoutes.js file. Below is the code of songRoutes.js (express route handler):
+const express = require('express');
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader');
+const path = require('path');
+
+const router = express.Router();
+
+const PROTO_PATH = path.resolve(__dirname, '../../../proto/song.proto');
+
+const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+	keepCase: true,
+	longs: String,
+	enums: String,
+	defaults: true,
+	oneofs: true
+});
+
+const songProto = grpc.loadPackageDefinition(packageDefinition).song;
+
+const SONG_SERVICE_PORT = process.env.SONG_SERVICE_PORT || 3001;
+const client = new songProto.SongService(localhost:${SONG_SERVICE_PORT}, grpc.credentials.createInsecure());
+
+// Health Check
+router.get('/health', (req, res) => {
+	client.HealthCheck({}, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response);
+	});
+});
+
+// Get all songs
+router.get('/all', (req, res) => {
+	client.GetAllSongs({}, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response.songs);
+	});
+});
+
+// Get songs by year
+router.get('/year/:year', (req, res) => {
+	const year = req.params.year;
+	console.log(Received request with year: "${year}");
+
+	// Validation
+	if (!year)
+		return res.status(400).json({ error: 'year parameter is required' });
+
+	if (year && isNaN(year))
+		return res.status(400).json({ error: 'year parameter must be a number' });
+
+	if (year < 1900 && year > new Date().getFullYear())
+		return res.status(400).json({ error: 'year parameter must be between 1900 to current year' });
+
+	client.GetSongsByYear({ year }, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response.songs);
+	});
+});
+
+// Get songs by artist
+router.get('/artist/:artist', (req, res) => {
+	const artist = req.params.artist;
+	console.log(Received request with artist: "${artist}");
+
+	// Validation
+	if (!artist)
+		return res.status(400).json({ error: 'artist parameter is required' });
+
+	client.GetSongsByArtist({ artist }, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response.songs);
+	});
+});
+
+// Get songs by writer
+router.get('/writer/:writer', (req, res) => {
+	const writer = req.params.writer;
+	console.log(Received request with writer: "${writer}");
+
+	// Validation
+	if (!writer)
+		return res.status(400).json({ error: 'writer parameter is required' });
+
+	client.GetSongsByWriter({ writer }, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response.songs);
+	});
+});
+
+// Get songs by album
+router.get('/album/:album', (req, res) => {
+	const album = req.params.album;
+	console.log(Received request with album: "${album}");
+
+	// Validation
+	if (!album)
+		return res.status(400).json({ error: 'album parameter is required' });
+
+	client.GetSongsByAlbum({ album }, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response.songs);
+	});
+});
+
+// Get songs by month
+router.get('/month/:month', (req, res) => {
+	const month = req.params.month;
+	console.log(Received request with month: "${month}");
+
+	// Validation
+	if (!month)
+		return res.status(400).json({ error: 'month parameter is required' });
+
+	client.GetSongsByMonth({ month }, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response.songs);
+	});
+});
+
+module.exports = router;
+
+and below is the code of songsRoutes.test.js (test file with all test cases of each routes in songRoutes.js)
+const request = require('supertest');
+const express = require('express');
+const songsRoutes = require('../src/routes/songsRoutes');
+
+// Don't mock the entire module, we'll mock the router in each test
+jest.mock('../src/routes/songsRoutes', () => {
+  return jest.fn();
+});
+
+describe('Songs Routes', () => {
+  let app;
+
+  beforeEach(() => {
+    // Clear all mocks before each test
+    jest.clearAllMocks();
+    
+    // Create a new Express app for each test
+    app = express();
+    
+    // Create a new mock router for each test
+    const mockRouter = express.Router();
+
+    // Add the mock router as mock implementation of each routes
+    songsRoutes.mockImplementation(() => mockRouter);
+    
+    app.use('/api/songs', songsRoutes());
+  });
+
+  describe('GET /health', () => {
+    it('should return correct status on health check', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/health', (req, res) => {
+        res.json({ status: "Welcome to Songs Service!" });
+      });
+
+      const response = await request(app)
+        .get('/api/songs/health')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toEqual({ status: "Welcome to Songs Service!" });
+    });
+  });
+
+  describe('GET /all', () => {
+    it('should return all songs', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/all', (req, res) => {
+        const mockSongs = [
+          { id: '1', title: 'Song 1', artist: 'Artist 1' },
+          { id: '2', title: 'Song 2', artist: 'Artist 2' },
+        ];
+        res.json(mockSongs);
+      });
+
+      const response = await request(app)
+        .get('/api/songs/all')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(String),
+          title: expect.any(String),
+          artist: expect.any(String)
+        })
+      ]));
+      expect(response.body.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('GET /year/:year', () => {
+    it('should return songs for a valid year', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/year/:year', (req, res) => {
+        const mockSongs = [
+          { id: '1', title: 'Song 1', artist: 'Artist 1', year: 2017 },
+          { id: '2', title: 'Song 2', artist: 'Artist 2', year: 2017 },
+        ];
+        res.json(mockSongs);
+      });
+
+      const response = await request(app)
+        .get('/api/songs/year/2017')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(String),
+          title: expect.any(String),
+          artist: expect.any(String),
+          year: 2017
+        })
+      ]));
+      expect(response.body.length).toBeGreaterThan(0);
+    });
+
+    it('should return 400 if year is not provided', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/year/', (req, res) => {
+        const year = req.params.year;
+        if (!year) {
+          return res.status(400).json({ error: 'year parameter is required' });
+        }
+        res.json([]);
+      });
+
+      const response = await request(app)
+        .get('/api/songs/year/')
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'year parameter is required' });
+    });
+
+    it('should return 400 if year is not a number', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/year/:year', (req, res) => {
+        const year = req.params.year;
+        if (isNaN(year)) {
+          return res.status(400).json({ error: 'year parameter must be a number' });
+        }
+        res.json([]);
+      });
+
+      const response = await request(app)
+        .get('/api/songs/year/notanumber')
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'year parameter must be a number' });
+    });
+
+    it('should return 400 if year is out of valid range', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/year/:year', (req, res) => {
+        const year = parseInt(req.params.year);
+        if (year < 1900 || year > new Date().getFullYear()) {
+          return res.status(400).json({ error: 'year parameter must be between 1900 to current year' });
+        }
+        res.json([]);
+      });
+
+      const response = await request(app)
+        .get('/api/songs/year/1800')
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'year parameter must be between 1900 to current year' });
+    });
+
+    it('should return 500 for internal server error', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/year/:year', (req, res) => {
+        res.status(500).json({ error: 'Internal Server Error' });
+      });
+
+      const response = await request(app)
+        .get('/api/songs/year/2017')
+        .expect('Content-Type', /json/)
+        .expect(500);
+
+      expect(response.body).toEqual({ error: 'Internal Server Error' });
+    });
+  });
+
+  describe('GET /artist/:artist', () => {
+    it('should return songs for a valid artist', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/artist/:artist', (req, res) => {
+        const mockSongs = [
+          { id: '1', title: 'Song 1', artist: 'Artist 1' },
+          { id: '2', title: 'Song 2', artist: 'Artist 1' },
+        ];
+        res.json(mockSongs);
+      });
+
+      const response = await request(app)
+        .get('/api/songs/artist/Artist%201')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(String),
+          title: expect.any(String),
+          artist: 'Artist 1'
+        })
+      ]));
+      expect(response.body.length).toBeGreaterThan(0);
+    });
+
+    it('should return 400 if artist is not provided', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/artist', (req, res) => {
+        res.status(400).json({ error: 'artist parameter is required' });
+      });
+
+      const response = await request(app)
+        .get('/api/songs/artist')
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'artist parameter is required' });
+    });
+
+    it('should return 500 for internal server error', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/artist/:artist', (req, res) => {
+        res.status(500).json({ error: 'Internal Server Error' });
+      });
+
+      const response = await request(app)
+        .get('/api/songs/artist/Artist%201')
+        .expect('Content-Type', /json/)
+        .expect(500);
+
+      expect(response.body).toEqual({ error: 'Internal Server Error' });
+    });
+  });
+
+  describe('GET /writer/:writer', () => {
+    it('should return songs for a valid writer', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/writer/:writer', (req, res) => {
+        const mockSongs = [
+          { id: '1', title: 'Song 1', writer: 'Writer 1' },
+          { id: '2', title: 'Song 2', writer: 'Writer 1' },
+        ];
+        res.json(mockSongs);
+      });
+
+      const response = await request(app)
+        .get('/api/songs/writer/Writer%201')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(String),
+          title: expect.any(String),
+          writer: 'Writer 1'
+        })
+      ]));
+      expect(response.body.length).toBeGreaterThan(0);
+    });
+
+    it('should return 400 if writer is not provided', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/writer', (req, res) => {
+        res.status(400).json({ error: 'writer parameter is required' });
+      });
+
+      const response = await request(app)
+        .get('/api/songs/writer')
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'writer parameter is required' });
+    });
+
+    it('should return 500 for internal server error', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/writer/:writer', (req, res) => {
+        res.status(500).json({ error: 'Internal Server Error' });
+      });
+
+      const response = await request(app)
+        .get('/api/songs/writer/Writer%201')
+        .expect('Content-Type', /json/)
+        .expect(500);
+
+      expect(response.body).toEqual({ error: 'Internal Server Error' });
+    });
+  });
+
+  describe('GET /album/:album', () => {
+    it('should return songs for a valid album', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/album/:album', (req, res) => {
+        const mockSongs = [
+          { id: '1', title: 'Song 1', album: 'Album 1' },
+          { id: '2', title: 'Song 2', album: 'Album 1' },
+        ];
+        res.json(mockSongs);
+      });
+
+      const response = await request(app)
+        .get('/api/songs/album/Album%201')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(String),
+          title: expect.any(String),
+          album: 'Album 1'
+        })
+      ]));
+      expect(response.body.length).toBeGreaterThan(0);
+    });
+
+    it('should return 400 if album is not provided', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/album', (req, res) => {
+        res.status(400).json({ error: 'album parameter is required' });
+      });
+
+      const response = await request(app)
+        .get('/api/songs/album')
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'album parameter is required' });
+    });
+
+    it('should return 500 for internal server error', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/album/:album', (req, res) => {
+        res.status(500).json({ error: 'Internal Server Error' });
+      });
+
+      const response = await request(app)
+        .get('/api/songs/album/Album%201')
+        .expect('Content-Type', /json/)
+        .expect(500);
+
+      expect(response.body).toEqual({ error: 'Internal Server Error' });
+    });
+  });
+
+  describe('GET /month/:month', () => {
+    it('should return songs for a valid month', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/month/:month', (req, res) => {
+        const mockSongs = [
+          { id: '1', title: 'Song 1', month: 'January' },
+          { id: '2', title: 'Song 2', month: 'January' },
+        ];
+        res.json(mockSongs);
+      });
+
+      const response = await request(app)
+        .get('/api/songs/month/January')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(String),
+          title: expect.any(String),
+          month: 'January'
+        })
+      ]));
+      expect(response.body.length).toBeGreaterThan(0);
+    });
+
+    it('should return 400 if month is not provided', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/month', (req, res) => {
+        res.status(400).json({ error: 'month parameter is required' });
+      });
+
+      const response = await request(app)
+        .get('/api/songs/month')
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'month parameter is required' });
+    });
+
+    it('should return 500 for internal server error', async () => {
+      const mockRouter = songsRoutes();
+      mockRouter.get('/month/:month', (req, res) => {
+        res.status(500).json({ error: 'Internal Server Error' });
+      });
+
+      const response = await request(app)
+        .get('/api/songs/month/January')
+        .expect('Content-Type', /json/)
+        .expect(500);
+
+      expect(response.body).toEqual({ error: 'Internal Server Error' });
+    });
+  });
+});
+
+I want to move onto search routes testing now. Below is the code of serchRoutes.js handler
+const express = require('express');
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader');
+const path = require('path');
+
+const router = express.Router();
+
+const PROTO_PATH = path.resolve(__dirname, '../../../proto/search.proto');
+
+const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+	keepCase: true,
+	longs: String,
+	enums: String,
+	defaults: true,
+	oneofs: true
+});
+
+const searchProto = grpc.loadPackageDefinition(packageDefinition).search;
+
+const SEARCH_SERVICE_PORT = process.env.SEARCH_SERVICE_PORT || 3002;
+const client = new searchProto.SearchService(localhost:${SEARCH_SERVICE_PORT}, grpc.credentials.createInsecure());
+
+// Health Check
+router.get('/health', (req, res) => {
+	client.HealthCheck({}, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response);
+	});
+});
+
+// Basic Seach (without query)
+router.post('/basic', (req, res) => {
+	const { query, limit = 10, offset = 0 } = req.body;
+	console.log(Received request with query: ${query}, limit: ${limit}, offset: ${offset});
+
+	// Validation
+	if (!query)
+		return res.status(400).json({ error: 'query parameter is required' });
+
+	if (limit && isNaN(limit))
+		return res.status(400).json({ error: 'limit parameter must be a number' });
+
+	if (offset && isNaN(offset))
+		return res.status(400).json({ error: 'offset parameter must be a number' });
+
+	client.Search({ query, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response);
+	});
+});
+
+// Advanced Search (with detailed query, refer README.md for query specification details)
+router.post('/advanced', (req, res) => {
+	const { query, filters, sort, limit = 10, offset = 0} = req.params;
+	console.log(Received request with query: ${query}, filters: ${filters}, sort: ${sort}, limit: ${limit}, offset: ${offset});
+	//TODO - proper vaidation
+
+	client.AdvancedSearch(req.body, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json(response);
+	});
+});
+
+router.post('/autocomplete', (req, res) => {
+	const { query, limit = 10 } = req.body;
+	console.log(Received request with query: ${query}, limit: ${limit});
+
+	// Validation
+	if (!query)
+		return res.status(400).json({ error: 'query parameter is required' });
+
+	if (limit && isNaN(limit))
+		return res.status(400).json({ error: 'limit parameter must be a number' });
+
+	client.Autocomplete({ query, limit: parseInt(limit) }, (err, response) => {
+		if (err) {
+			console.error('Error:', err);
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+		res.json({ suggestions: response.suggestions });
+	});
+});
+
+module.exports = router;
+
+I already have created searchRoutes.test.js in which health-check endpoint has passed in test successfully. I want to move onto next endpoint /search/basic/ which i have implemented but not working. Below is the code for above test file:
+const request = require('supertest');
+const express = require('express');
+const searchRoutes = require('../src/routes/searchRoutes');
+jest.setTimeout(10000);
+
+// Don't mock the entire module, we'll mock the router in each test
+jest.mock('../src/routes/searchRoutes', () => {
+  return jest.fn();
+});
+
+describe('Search Routes', () => {
+  let app;
+
+  beforeEach(() => {
+    // Clear all mocks before each test
+    jest.clearAllMocks();
+    
+    // Create a new Express app for each test
+    app = express();
+    
+    // Create a new mock router for each test
+    const mockRouter = express.Router();
+
+    // Add the mock router as mock implementation of each routes
+    searchRoutes.mockImplementation(() => mockRouter);
+    
+    app.use('/api/search', searchRoutes());
+  });
+
+  describe('GET /health', () => {
+    it('should return correct status on health check', async () => {
+      const mockRouter = searchRoutes();
+      mockRouter.get('/health', (req, res) => {
+        res.json({ status: "Welcome to Search Service!" });
+      });
+
+      const response = await request(app)
+        .get('/api/search/health')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toEqual({ status: "Welcome to Search Service!" });
+    });
+  });
+
+  describe('POST /basic', () => {
+    it('should return results for valid query', async () => {
+      const mockRouter = searchRoutes();
+      mockRouter.post('/basic', (req, res) => {
+        const { query, limit, offset } = req.body;
+        // Simulate successful search result
+        const mockResponse = {
+          results: [
+            {
+              writers: ["Taylor Swift", "Max Martin", "Shellback"],
+              plays: [
+                { month: "June", count: 27 },
+                { month: "July", count: 30 },
+                { month: "August", count: 32 }
+              ],
+              id: "66ab55299061c56a4d809fb2",
+              title: "22",
+              artist: "Taylor Swift",
+              album: "Red",
+              year: 2012,
+              relevance_score: 0
+            },
+            // Additional mock results can be added here
+          ],
+          total_results: 22
+        };
+        res.json(mockResponse);
+      });
+
+      const response = await request(app)
+        .post('/api/search/basic')
+        .send({ query: 'max', limit: 10, offset: 0 })
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toEqual({
+        results: expect.arrayContaining([
+          expect.objectContaining({
+            writers: expect.arrayContaining([
+              expect.stringMatching(/Taylor Swift|Max Martin|Shellback/)
+            ]),
+            plays: expect.arrayContaining([
+              expect.objectContaining({
+                month: expect.stringMatching(/June|July|August/),
+                count: expect.any(Number)
+              })
+            ]),
+            id: expect.any(String),
+            title: expect.any(String),
+            artist: expect.any(String),
+            album: expect.any(String),
+            year: expect.any(Number),
+            relevance_score: expect.any(Number)
+          })
+        ]),
+        total_results: expect.any(Number)
+      });
+    });
+
+    it('should return 400 if query is missing', async () => {
+      const mockRouter = searchRoutes();
+      mockRouter.post('/basic', (req, res) => {
+        const { query } = req.body;
+        if (!query) {
+          return res.status(400).json({ error: 'query parameter is required' });
+        }
+        res.status(200).json({});
+      });
+
+      const response = await request(app)
+        .post('/api/search/basic')
+        .send({ limit: 10, offset: 0 })
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'query parameter is required' });
+    });
+
+    it('should return 400 if limit is not a number', async () => {
+      const mockRouter = searchRoutes();
+      mockRouter.post('/basic', (req, res) => {
+        const { limit } = req.body;
+        if (limit && isNaN(limit)) {
+          return res.status(400).json({ error: 'limit parameter must be a number' });
+        }
+        res.status(200).json({});
+      });
+
+      const response = await request(app)
+        .post('/api/search/basic')
+        .send({ query: 'test', limit: 'ten', offset: 0 })
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'limit parameter must be a number' });
+    });
+
+    it('should return 400 if offset is not a number', async () => {
+      const mockRouter = searchRoutes();
+      mockRouter.post('/basic', (req, res) => {
+        const { offset } = req.body;
+        if (offset && isNaN(offset)) {
+          return res.status(400).json({ error: 'offset parameter must be a number' });
+        }
+        res.status(200).json({});
+      });
+
+      const response = await request(app)
+        .post('/api/search/basic')
+        .send({ query: 'test', limit: 10, offset: 'zero' })
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toEqual({ error: 'offset parameter must be a number' });
+    });
+
+    it('should return 500 if there is an internal server error', async () => {
+      const mockRouter = searchRoutes();
+      mockRouter.post('/basic', (req, res) => {
+        res.status(500).json({ error: 'Internal Server Error' });
+      });
+
+      const response = await request(app)
+        .post('/api/search/basic')
+        .send({ query: 'test', limit: 10, offset: 0 })
+        .expect('Content-Type', /json/)
+        .expect(500);
+
+      expect(response.body).toEqual({ error: 'Internal Server Error' });
+    });
+  });
+
+});
+
+I recommend you to compare both the test files and stick to the structure of songs file as it has passed successfully

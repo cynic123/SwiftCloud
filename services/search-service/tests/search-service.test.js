@@ -25,7 +25,7 @@ jest.mock('@grpc/grpc-js', () => ({
   },
 }));
 
-describe('Health Check', () => {
+describe('Search Service - Health Check', () => {
   test('HealthCheck returns correct status', async () => {
     const mockCallback = jest.fn();
     await searchService.HealthCheck(null, mockCallback);
@@ -34,7 +34,7 @@ describe('Health Check', () => {
 });
 
 // Basic Search
-describe('Search Service', () => {
+describe('Search Service - Basic Search', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -163,7 +163,8 @@ describe('Search Service', () => {
   });
 });
 
-describe('Advanced Search Service', () => {
+// Advanced Search
+describe('Search Service - Advanced Search', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -266,7 +267,7 @@ describe('Advanced Search Service', () => {
 });
 
 // Autocomplete Service
-describe('Autocomplete Service', () => {
+describe('Search Service - Autocomplete', () => {
   test('successfully retrieves autocomplete suggestions based on the query', async () => {
     const mockSuggestions = [
       { value: 'Speak Now', type: 'album' },
