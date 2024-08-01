@@ -1,32 +1,35 @@
 #!/bin/bash
 
-services=("song-service" "popularity-service" "trend-service" "search-service" "swift-api")
+declare -A services
+
+# Service directories and their respective deploy scripts
+services=(
+    ["popularity-service"]="./services/popularity-service/deploy.sh"
+    ["search-service"]="./services/search-service/deploy.sh"
+    ["songs-service"]="./services/songs-service/deploy.sh"
+    ["trends-service"]="./services/trends-service/deploy.sh"
+    ["swift-api"]="./swift-api/deploy.sh"
+)
 
 # Navigate to the project root
 cd "$(dirname "$0")"
 
-# Function to deploy a service
 deploy_service() {
     service=$1
+    script=$2
+    
     echo "Deploying $service"
-    if [ "$service" == "swift-api" ]; then
-        cd "./swift-api"
+    if [ -x "$script" ]; then
+        $script
     else
-        cd "./services/$service"
+        echo "Deploy script not found or not executable for $service"
     fi
-    npm install
-    pm2 startOrRestart ecosystem.config.js --env production
-    cd ../..
-    echo "$service deployed successfully"
 }
 
-# Deploy each service
-for service in "${services[@]}"
+for service in "${!services[@]}"
 do
-    deploy_service $service
+    deploy_service $service ${services[$service]}
 done
 
 echo "All services and Swift API deployed"
-
-# List all running PM2 processes
 pm2 list
