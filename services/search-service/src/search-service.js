@@ -115,6 +115,7 @@ const searchService = {
   Autocomplete: async (call, callback) => {
     const { query, limit = 5 } = call.request;
     try {
+      // Use a case-insensitive regex that matches at the beginning of the string
       const regexPattern = new RegExp(`^${query}`, 'i');
       const suggestions = await Song.aggregate([
         {
@@ -133,19 +134,28 @@ const searchService = {
               { $cond: [{ $regexMatch: { input: "$title", regex: regexPattern } }, { value: "$title", type: "title" }, null] },
               { $cond: [{ $regexMatch: { input: "$artist", regex: regexPattern } }, { value: "$artist", type: "artist" }, null] },
               { $cond: [{ $regexMatch: { input: "$album", regex: regexPattern } }, { value: "$album", type: "album" }, null] },
-              { $cond: [{ $regexMatch: { input: { $arrayElemAt: ["$writers", 0] }, regex: regexPattern } }, { value: { $arrayElemAt: ["$writers", 0] }, type: "writer" }, null] }
+              { $map: {
+                input: "$writers",
+                as: "writer",
+                in: { $cond: [{ $regexMatch: { input: "$$writer", regex: regexPattern } }, { value: "$$writer", type: "writer" }, null] }
+              } }
             ]
           }
         },
         { $unwind: "$suggestions" },
+        { $unwind: "$suggestions" },
         { $match: { "suggestions": { $ne: null } } },
-        { $replaceRoot: { newRoot: "$suggestions" } },
-        { $group: { _id: "$value", doc: { $first: "$$ROOT" } } },
-        { $replaceRoot: { newRoot: "$doc" } },
+        {
+          $group: {
+            _id: { value: "$suggestions.value", type: "$suggestions.type" },
+            suggestion: { $first: "$suggestions" }
+          }
+        },
+        { $replaceRoot: { newRoot: "$suggestion" } },
         { $sort: { value: 1 } },
         { $limit: limit }
       ]);
-  
+
       callback(null, { suggestions });
     } catch (err) {
       console.error('Autocomplete error:', err);

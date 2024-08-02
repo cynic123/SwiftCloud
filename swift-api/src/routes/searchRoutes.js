@@ -49,7 +49,7 @@ router.post('/advanced', (req, res) => {
 		return res.status(400).json({ error: 'offset parameter must be a number' });
 	}
 
-	const validFields = ['title', 'artist', 'album', 'writers'];
+	const validFields = ['title', 'artist', 'album', 'writers', 'year'];
 	const validOperators = ['eq', 'gte', 'lte', 'contains'];
 
 	if (filters) {
@@ -66,6 +66,38 @@ router.post('/advanced', (req, res) => {
 			if (!validOperators.includes(filter.operator)) {
 				return res.status(400).json({ error: `invalid operator in filter: ${filter.operator}` });
 			}
+
+			// Check for required 'value' parameter
+			if (['eq', 'gte', 'lte'].includes(filter.operator)) {
+				if (filter.value === undefined) {
+					return res.status(400).json({ error: `value is required for operator: ${filter.operator}` });
+				}
+			}
+
+			// Special handling for 'year' field
+			if (filter.field === 'year') {
+				let currentYear = new Date().getFullYear();
+				if (filter.operator !== 'contains') {
+					let yearValue = filter.value;
+					if (typeof yearValue === 'string') {
+						yearValue = parseInt(yearValue, 10);
+					}
+					if (isNaN(yearValue)) {
+						return res.status(400).json({ error: 'year value must be a valid number' });
+					}
+					// Check if year is within valid range
+					if (yearValue <= 1900 || yearValue > currentYear) {
+						return res.status(400).json({ error: `year must be between 1900 and ${currentYear}` });
+					}
+					// Assign the parsed number back to filter.value
+					filter.value = yearValue;
+				}
+			}
+
+			// Ensure 'contains' operator is not used with 'year' field
+			if (filter.field === 'year' && filter.operator === 'contains') {
+				return res.status(400).json({ error: "'contains' operator cannot be used with 'year' field" });
+			}
 		}
 	}
 
@@ -76,7 +108,7 @@ router.post('/advanced', (req, res) => {
 		if (!sort.field || !sort.order) {
 			return res.status(400).json({ error: 'sort must have a field and an order' });
 		}
-		if (![...validFields, 'year'].includes(sort.field)) {
+		if (![validFields].includes(sort.field)) {
 			return res.status(400).json({ error: `invalid field in sort: ${sort.field}` });
 		}
 		if (!['asc', 'desc'].includes(sort.order)) {
