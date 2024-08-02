@@ -4,7 +4,6 @@ package search;
 
 service SearchService {
   rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {}
-  rpc Search (SearchRequest) returns (SearchResponse) {}
   rpc AdvancedSearch (AdvancedSearchRequest) returns (SearchResponse) {}
   rpc Autocomplete (AutocompleteRequest) returns (AutocompleteResponse) {}
 }
@@ -13,12 +12,6 @@ message HealthCheckRequest {}
 
 message HealthCheckResponse {
   string status = 1;
-}
-
-message SearchRequest {
-  string query = 1;
-  int32 limit = 2;
-  int32 offset = 3;
 }
 
 message AdvancedSearchRequest {
@@ -67,7 +60,6 @@ message Song {
   string album = 5;
   int32 year = 6;
   repeated Play plays = 7;
-  float relevance_score = 8;
 }
 
 message Play {

@@ -31,30 +31,6 @@ router.get('/health', (req, res) => {
 	});
 });
 
-// Basic Seach (without query)
-router.post('/basic', (req, res) => {
-	const { query, limit = 10, offset = 0 } = req.body;
-	console.log(`Received request with query: ${query}, limit: ${limit}, offset: ${offset}`);
-
-	// Validation
-	if (!query)
-		return res.status(400).json({ error: 'query parameter is required' });
-
-	if (limit && isNaN(limit))
-		return res.status(400).json({ error: 'limit parameter must be a number' });
-
-	if (offset && isNaN(offset))
-		return res.status(400).json({ error: 'offset parameter must be a number' });
-
-	client.Search({ query, limit: parseInt(limit), offset: parseInt(offset) }, (err, response) => {
-		if (err) {
-			console.error('Error:', err);
-			return res.status(500).json({ error: 'Internal Server Error' });
-		}
-		res.json(response);
-	});
-});
-
 // Advanced Search (with detailed query, refer README.md for query specification details)
 router.post('/advanced', (req, res) => {
 	const { query, filters, sort, limit = 10, offset = 0 } = req.body;
@@ -108,7 +84,7 @@ router.post('/advanced', (req, res) => {
 		}
 	}
 
-	client.AdvancedSearch(req.body, (err, response) => {
+	client.AdvancedSearch({ query, filters, sort, limit, offset }, (err, response) => {
 		if (err) {
 			console.error('Error:', err);
 			return res.status(500).json({ error: 'Internal Server Error' });

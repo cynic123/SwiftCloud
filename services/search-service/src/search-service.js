@@ -14,48 +14,8 @@ const searchService = {
     }
   },
 
-  Search: async (call, callback) => {
-    const { query, limit = 10, offset = 0 } = call.request;
-    try {
-      const searchQuery = {
-        $or: [
-          { title: { $regex: query, $options: 'i' } },
-          { artist: { $regex: query, $options: 'i' } },
-          { album: { $regex: query, $options: 'i' } },
-          { writers: { $regex: query, $options: 'i' } }
-        ]
-      };
-
-      const songs = await Song.find(searchQuery)
-        .skip(offset)
-        .limit(limit)
-        .lean();
-
-      const totalResults = await Song.countDocuments(searchQuery);
-
-      const formattedResults = songs.map(song => ({
-        id: song._id.toString(),
-        title: song.title,
-        artist: song.artist,
-        writers: song.writers,
-        album: song.album,
-        year: song.year,
-        plays: song.plays
-      }));
-
-      callback(null, { results: formattedResults, total_results: totalResults });
-    } catch (err) {
-      console.error('Search error:', err);
-      callback({
-        code: 500,
-        message: 'Internal Server Error',
-        status: 'INTERNAL'
-      });
-    }
-  },
-
   AdvancedSearch: async (call, callback) => {
-    const { query, filters, sort, limit = 10, offset = 0 } = call.request;
+    const { query, filters, sort, limit, offset } = call.request;
     try {
       console.log('Received request:', JSON.stringify(call.request, null, 2));
   
