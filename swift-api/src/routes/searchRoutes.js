@@ -108,7 +108,7 @@ router.post('/advanced', (req, res) => {
 		if (!sort.field || !sort.order) {
 			return res.status(400).json({ error: 'sort must have a field and an order' });
 		}
-		if (![validFields].includes(sort.field)) {
+		if (!validFields.includes(sort.field)) {
 			return res.status(400).json({ error: `invalid field in sort: ${sort.field}` });
 		}
 		if (!['asc', 'desc'].includes(sort.order)) {

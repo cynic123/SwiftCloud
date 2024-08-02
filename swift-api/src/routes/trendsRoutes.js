@@ -155,6 +155,7 @@ router.get('/artists', (req, res) => {
 	});
 });
 
+// Get trending albums of the last n month(s) requested by user
 router.get('/albums', (req, res) => {
 	const { months, limit = 50 } = req.query;
 	console.log(`Received trending albums request with months: "${months}"`);

@@ -10,9 +10,10 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 
 app.use('/api/songs', songsRoutes);
+app.use('/api/search', searchRoutes);
 app.use('/api/popularity', popularityRoutes);
 app.use('/api/trends', trendsRoutes);
-app.use('/api/search', searchRoutes);
+app.use('/api', (req, res) => { res.json({ message: 'Welcome to Swift API!' })});
 
 app.listen(port, () => {
   console.log(`Swift API running on port ${port}`);
