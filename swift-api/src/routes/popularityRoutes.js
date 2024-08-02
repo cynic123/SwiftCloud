@@ -81,6 +81,32 @@ router.get('/songs/most_all_time', (req, res) => {
 	});
 });
 
+/* Get overall rankings of songs that match or start with the user's searched title, aggregated across all 
+ * available months in the input dataset.
+ */
+router.get('/songs/song', (req, res) => {
+	const { title } = req.query;
+	console.log(`Received request with title: "${title}"`);
+
+	// Validation
+	if (!title)
+		return res.status(400).json({ error: 'Title query is required' });
+
+	client.GetSongPopularity({ title }, (err, response) => {
+		if (err) {
+			console.error('gRPC error:', err);
+			if (err.code === StatusCodes.NOT_FOUND) {
+				console.error('No songs found, returning 404 error');
+				return res.status(404).json({ error: 'No songs found' });
+			}
+			console.error('Internal server error, returning 500 error');
+			return res.status(500).json({ error: 'Internal Server Error' });
+		}
+
+		res.json(response);
+	});
+});
+
 // Get most popular albums monthly wise
 router.get('/albums/most_monthly', (req, res) => {
 	const { limit = 50, offset = 0 } = req.query;
