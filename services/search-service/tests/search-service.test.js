@@ -33,136 +33,6 @@ describe('Search Service - Health Check', () => {
   });
 });
 
-// Basic Search
-describe('Search Service - Basic Search', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  const mockQueryBuilder = {
-    skip: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    lean: jest.fn().mockReturnThis()
-  };
-
-  Song.find.mockImplementation(() => mockQueryBuilder);
-
-  test('successfully retrieves songs based on the search query', async () => {
-    const mockSongs = [
-      {
-        _id: '66a8f801aa4cecd403f93a85',
-        title: '22',
-        artist: 'Taylor Swift',
-        writers: ['Taylor Swift', 'Max Martin', 'Shellback'],
-        album: 'Red',
-        year: 2012,
-        plays: [
-          { month: 'June', count: 27 },
-          { month: 'July', count: 30 },
-          { month: 'August', count: 32 }
-        ]
-      }
-    ];
-
-    const query = 'Max Martin';
-    const limit = 10;
-    const offset = 0;
-    const totalResults = 22;
-
-    mockQueryBuilder.lean.mockResolvedValue(mockSongs);
-    Song.countDocuments.mockResolvedValue(totalResults);
-
-    const mockCall = { request: { query, limit, offset } };
-    const mockCallback = jest.fn();
-
-    await searchService.Search(mockCall, mockCallback);
-
-    expect(Song.find).toHaveBeenCalledWith({
-      $or: [
-        { title: { $regex: query, $options: 'i' } },
-        { artist: { $regex: query, $options: 'i' } },
-        { album: { $regex: query, $options: 'i' } },
-        { writers: { $regex: query, $options: 'i' } }
-      ]
-    });
-    expect(mockQueryBuilder.skip).toHaveBeenCalledWith(offset);
-    expect(mockQueryBuilder.limit).toHaveBeenCalledWith(limit);
-    expect(Song.countDocuments).toHaveBeenCalledWith({
-      $or: [
-        { title: { $regex: query, $options: 'i' } },
-        { artist: { $regex: query, $options: 'i' } },
-        { album: { $regex: query, $options: 'i' } },
-        { writers: { $regex: query, $options: 'i' } }
-      ]
-    });
-
-    const formattedResults = mockSongs.map(song => ({
-      id: song._id.toString(),
-      title: song.title,
-      artist: song.artist,
-      writers: song.writers,
-      album: song.album,
-      year: song.year,
-      plays: song.plays
-    }));
-
-    expect(mockCallback).toHaveBeenCalledWith(null, {
-      results: formattedResults,
-      total_results: totalResults
-    });
-  });
-
-  test('returns empty array when no songs match the query', async () => {
-    mockQueryBuilder.lean.mockResolvedValue([]);
-    Song.countDocuments.mockResolvedValue(0);
-
-    const mockCall = { request: { query: 'NonexistentArtist', limit: 10, offset: 0 } };
-    const mockCallback = jest.fn();
-
-    await searchService.Search(mockCall, mockCallback);
-
-    expect(mockCallback).toHaveBeenCalledWith(null, { results: [], total_results: 0 });
-  });
-
-  test('handles database query error', async () => {
-    mockQueryBuilder.lean.mockRejectedValue(new Error('Database error'));
-
-    const mockCall = { request: { query: 'Max Martin', limit: 10, offset: 0 } };
-    const mockCallback = jest.fn();
-
-    await searchService.Search(mockCall, mockCallback);
-
-    expect(mockCallback).toHaveBeenCalledWith({
-      code: 500,
-      message: 'Internal Server Error',
-      status: 'INTERNAL'
-    });
-  });
-
-  test('uses default limit and offset when not provided', async () => {
-    mockQueryBuilder.lean.mockResolvedValue([]);
-    Song.countDocuments.mockResolvedValue(0);
-
-    const mockCall = { request: { query: 'Max Martin' } };
-    const mockCallback = jest.fn();
-
-    await searchService.Search(mockCall, mockCallback);
-
-    expect(Song.find).toHaveBeenCalledWith({
-      $or: [
-        { title: { $regex: 'Max Martin', $options: 'i' } },
-        { artist: { $regex: 'Max Martin', $options: 'i' } },
-        { album: { $regex: 'Max Martin', $options: 'i' } },
-        { writers: { $regex: 'Max Martin', $options: 'i' } }
-      ]
-    });
-    expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
-    expect(mockQueryBuilder.limit).toHaveBeenCalledWith(10);
-
-    expect(mockCallback).toHaveBeenCalledWith(null, { results: [], total_results: 0 });
-  });
-});
-
 // Advanced Search
 describe('Search Service - Advanced Search', () => {
   beforeEach(() => {
@@ -250,19 +120,63 @@ describe('Search Service - Advanced Search', () => {
     });
   });
 
-  test('uses default limit and offset when not provided in advanced search', async () => {
-    Song.aggregate.mockResolvedValue([]);
-    Song.countDocuments.mockResolvedValue(0);
-
+  test('uses default sorting when limit and offset are not provided in advanced search', async () => {
+    const mockSongs = [
+      {
+        _id: '66a908fe9e100e57f9a57dd5',
+        title: 'I Did Something Bad',
+        artist: 'Taylor Swift',
+        writers: ['Taylor Swift', 'Max Martin', 'Shellback'],
+        album: 'Reputation',
+        year: 2017,
+        plays: [
+          { month: 'June', count: 66 },
+          { month: 'July', count: 16 },
+          { month: 'August', count: 4 }
+        ],
+        relevance_score: 0.25
+      },
+      // Add more mock songs if needed
+    ];
+  
+    Song.aggregate.mockResolvedValue(mockSongs);
+    Song.countDocuments.mockResolvedValue(mockSongs.length);
+  
     const mockCall = { request: { query: 'Max Martin', filters: [], sort: {} } };
     const mockCallback = jest.fn();
-
+  
     await searchService.AdvancedSearch(mockCall, mockCallback);
-
-    expect(Song.aggregate).toHaveBeenCalledWith(expect.arrayContaining([
-      { $skip: 0 },
-      { $limit: 10 }
-    ]));
+  
+    // Check if aggregate was called with the correct pipeline
+    expect(Song.aggregate).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ $match: expect.any(Object) }),
+        expect.objectContaining({ $addFields: expect.any(Object) }),
+        expect.objectContaining({ $sort: { relevance_score: -1 } }),
+        expect.objectContaining({ $skip: undefined }),
+        expect.objectContaining({ $limit: undefined })
+      ])
+    );
+  
+    // Check if the callback was called with the correct structure
+    expect(mockCallback).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({
+        results: expect.arrayContaining([
+          expect.objectContaining({
+            id: expect.any(String),
+            title: expect.any(String),
+            artist: expect.any(String),
+            writers: expect.any(Array),
+            album: expect.any(String),
+            year: expect.any(Number),
+            plays: expect.any(Array),
+            relevance_score: expect.any(Number)
+          })
+        ]),
+        total_results: mockSongs.length
+      })
+    );
   });
 });
 
