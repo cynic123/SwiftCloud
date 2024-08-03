@@ -42,11 +42,14 @@ Ensure that the application and its dependencies are installed beforehand.
 `npm run test:<service_name>`
 e.g. to run songs-service test case, `npm run test:songs-service`
 
+- For Postman users, import the`SwiftCloud.postman_collection.json`file into your application.
+
 ------
 ### Deployment
 Deployment scripts are provided for each microservice, the Swift-API, and the entire application. These scripts use the **pm2** process manager (https://pm2.keymetrics.io/) for deployment. 
-- To deploy all services, run the following command from the project root:
+- To deploy all services, run the following command from the project root: 
 `sh deploy.sh`
+
 - To deploy each service individually, navigate to the service root and execute the same command.
 
 It is assumed that all deployments are performed on the same instance where the scripts are executed. To deploy to different instances, configure the **ecosystem.config.js**  and **deploys.sh** files in each service accordingly.
