@@ -42,8 +42,9 @@ Ensure that the application and its dependencies are installed beforehand.
 `npm run test:<service_name>`
 e.g. to run songs-service test case, `npm run test:songs-service`
 
-- For Postman users, import the`SwiftCloud.postman_collection.json`file into your application.
+- For Postman users, import the`SwiftCloud.postman_collection.json`file file located in the`/utils`folder into your application.
 
+- Please refer to the`SwiftCloud API.docx`or`SwiftCloud API.pdf`files located in the`/docs`folder for API specifications.
 ------
 ### Deployment
 Deployment scripts are provided for each microservice, the Swift-API, and the entire application. These scripts use the **pm2** process manager (https://pm2.keymetrics.io/) for deployment. 
