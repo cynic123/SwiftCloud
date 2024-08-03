@@ -1,7 +1,7 @@
 # SwiftCloud
 ### Overview
 SwiftCloud is a comprehensive music analytics platform dedicated to Taylor Swift's discography. It offers various APIs to interact with and analyze song data, providing insights into song plays, popularity trends, and more. The platform is divided into four main microservices, each responsible for different aspects of the analytics:
-- **Songs** -  Handles song search by various criteria.
+- **Songs** - Handles song search by various criteria.
 - **Search** - Provides advanced search functionality across the data.
 - **Popularity** - Manages and analyzes the popularity of songs, artists, and albums.
 - **Trends** - Analyzes and provides trending information.
@@ -23,7 +23,8 @@ The application consists of four core microservices (**songs**, **search**, **po
 - Go to project root directory.
 `cd SwiftCloud`
 
-- Run`npm run install:all`
+- Run `npm run install:all`
+This command installs the entire application, including all its services and dependencies. It also imports the contents of the provided sample data `SwiftCloud-Sheet1.csv`, located in the `/utils` folder, into MongoDB collections (`songs`, `albums` and `artists`).
 
 - Run `npm start`
 
@@ -53,8 +54,8 @@ Deployment scripts are provided for each microservice, the Swift-API, and the en
 
 - To deploy each service individually, navigate to the service root and execute the same command.
 
-It is assumed that all deployments are performed on the same instance where the scripts are executed. To deploy to different instances, configure the **ecosystem.config.js**  and **deploys.sh** files in each service accordingly.
+It is assumed that all deployments are performed on the same instance where the scripts are executed. To deploy to different instances, configure the `ecosystem.config.js` and `deploys.sh` files in each service accordingly.
 
 -----
 ### Remarks
-This application is a simplified example of how a music analytics platform can be designed. It does not include key areas such as authentication, authorization, database optimizations (indexing, replication, sharding, etc.), or other performance and scalability considerations. In a real production environment, developers must address these aspects as needed.
+This application is a simplified example of how a music analytics platform can be designed. It does not include key areas such as **authentication**, **authorization**, **database optimizations** (indexing, replication, sharding, etc.), or other **performance** and **scalability considerations**. In a real production environment, developers must address these aspects as needed.
