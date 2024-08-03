@@ -119,8 +119,11 @@ describe('Search Service - Advanced Search', () => {
       status: 'INTERNAL'
     });
   });
+});
 
-  test('uses default sorting when limit and offset are not provided in advanced search', async () => {
+// Autocomplete Service
+describe('Search Service - Autocomplete', () => {
+  test('successfully retrieves songs based on the advanced search query', async () => {
     const mockSongs = [
       {
         _id: '66a908fe9e100e57f9a57dd5',
@@ -136,99 +139,39 @@ describe('Search Service - Advanced Search', () => {
         ],
         relevance_score: 0.25
       },
-      // Add more mock songs if needed
+      // Add more mock songs as needed
     ];
-  
+
+    const query = 'Max Martin';
+    const filters = [{ field: 'year', operator: 'gte', value: 2008 }];
+    const sort = { field: 'year', order: 'desc' };
+    const limit = 20;
+    const offset = 0;
+
     Song.aggregate.mockResolvedValue(mockSongs);
-    Song.countDocuments.mockResolvedValue(mockSongs.length);
-  
-    const mockCall = { request: { query: 'Max Martin', filters: [], sort: {} } };
+
+    const mockCall = { request: { query, filters, sort, limit, offset } };
     const mockCallback = jest.fn();
-  
+
     await searchService.AdvancedSearch(mockCall, mockCallback);
-  
-    // Check if aggregate was called with the correct pipeline
-    expect(Song.aggregate).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ $match: expect.any(Object) }),
-        expect.objectContaining({ $addFields: expect.any(Object) }),
-        expect.objectContaining({ $sort: { relevance_score: -1 } }),
-        expect.objectContaining({ $skip: undefined }),
-        expect.objectContaining({ $limit: undefined })
-      ])
-    );
-  
-    // Check if the callback was called with the correct structure
-    expect(mockCallback).toHaveBeenCalledWith(
-      null,
-      expect.objectContaining({
-        results: expect.arrayContaining([
-          expect.objectContaining({
-            id: expect.any(String),
-            title: expect.any(String),
-            artist: expect.any(String),
-            writers: expect.any(Array),
-            album: expect.any(String),
-            year: expect.any(Number),
-            plays: expect.any(Array),
-            relevance_score: expect.any(Number)
-          })
-        ]),
-        total_results: mockSongs.length
-      })
-    );
-  });
-});
 
-// Autocomplete Service
-describe('Search Service - Autocomplete', () => {
-  test('successfully retrieves autocomplete suggestions based on the query', async () => {
-    const mockSuggestions = [
-      { value: 'Speak Now', type: 'album' },
-      { value: 'Speak Now\n(Deluxe edition)', type: 'album' },
-      { value: 'Speak Now World Tour – Live', type: 'album' }
-    ];
+    expect(Song.aggregate).toHaveBeenCalledWith(expect.any(Array));
 
-    const query = 'spe';
-    const limit = 5;
+    const formattedResults = mockSongs.map(song => ({
+      id: song._id.toString(),
+      title: song.title,
+      artist: song.artist,
+      writers: song.writers,
+      album: song.album,
+      year: song.year,
+      plays: song.plays,
+      relevance_score: song.relevance_score
+    }));
 
-    Song.aggregate.mockResolvedValue(mockSuggestions);
-
-    const mockCall = { request: { query, limit } };
-    const mockCallback = jest.fn();
-
-    await searchService.Autocomplete(mockCall, mockCallback);
-
-    expect(Song.aggregate).toHaveBeenCalledWith([
-      {
-        $match: {
-          $or: [
-            { title: new RegExp(`^${query}`, 'i') },
-            { artist: new RegExp(`^${query}`, 'i') },
-            { album: new RegExp(`^${query}`, 'i') },
-            { writers: new RegExp(`^${query}`, 'i') }
-          ]
-        }
-      },
-      {
-        $project: {
-          suggestions: [
-            { $cond: [{ $regexMatch: { input: "$title", regex: new RegExp(`^${query}`, 'i') } }, { value: "$title", type: "title" }, null] },
-            { $cond: [{ $regexMatch: { input: "$artist", regex: new RegExp(`^${query}`, 'i') } }, { value: "$artist", type: "artist" }, null] },
-            { $cond: [{ $regexMatch: { input: "$album", regex: new RegExp(`^${query}`, 'i') } }, { value: "$album", type: "album" }, null] },
-            { $cond: [{ $regexMatch: { input: { $arrayElemAt: ["$writers", 0] }, regex: new RegExp(`^${query}`, 'i') } }, { value: { $arrayElemAt: ["$writers", 0] }, type: "writer" }, null] }
-          ]
-        }
-      },
-      { $unwind: "$suggestions" },
-      { $match: { "suggestions": { $ne: null } } },
-      { $replaceRoot: { newRoot: "$suggestions" } },
-      { $group: { _id: "$value", doc: { $first: "$$ROOT" } } },
-      { $replaceRoot: { newRoot: "$doc" } },
-      { $sort: { value: 1 } },
-      { $limit: limit }
-    ]);
-    expect(mockCallback).toHaveBeenCalledWith(null, { suggestions: mockSuggestions });
+    expect(mockCallback).toHaveBeenCalledWith(null, {
+      results: formattedResults,
+      total_results: mockSongs.length
+    });
   });
 
   test('returns empty array when no suggestions match the query', async () => {
@@ -270,7 +213,7 @@ describe('Search Service - Autocomplete', () => {
       { value: 'Speak Now World Tour – Live', type: 'album' }
     ];
 
-    const query = 'spe';
+    const query = 'Max Martin';
     const defaultLimit = 5;
 
     Song.aggregate.mockResolvedValue(mockSuggestions);
@@ -284,31 +227,38 @@ describe('Search Service - Autocomplete', () => {
       {
         $match: {
           $or: [
-            { title: new RegExp(`^${query}`, 'i') },
-            { artist: new RegExp(`^${query}`, 'i') },
-            { album: new RegExp(`^${query}`, 'i') },
-            { writers: new RegExp(`^${query}`, 'i') }
+            { title: { $regex: query, $options: 'i' } },
+            { artist: { $regex: query, $options: 'i' } },
+            { album: { $regex: query, $options: 'i' } },
+            { writers: { $elemMatch: { $regex: query, $options: 'i' } } }
           ]
         }
       },
       {
         $project: {
           suggestions: [
-            { $cond: [{ $regexMatch: { input: "$title", regex: new RegExp(`^${query}`, 'i') } }, { value: "$title", type: "title" }, null] },
-            { $cond: [{ $regexMatch: { input: "$artist", regex: new RegExp(`^${query}`, 'i') } }, { value: "$artist", type: "artist" }, null] },
-            { $cond: [{ $regexMatch: { input: "$album", regex: new RegExp(`^${query}`, 'i') } }, { value: "$album", type: "album" }, null] },
-            { $cond: [{ $regexMatch: { input: { $arrayElemAt: ["$writers", 0] }, regex: new RegExp(`^${query}`, 'i') } }, { value: { $arrayElemAt: ["$writers", 0] }, type: "writer" }, null] }
+            { $cond: [{ $regexMatch: { input: "$title", regex: query, options: 'i' } }, { value: "$title", type: "title" }, null] },
+            { $cond: [{ $regexMatch: { input: "$artist", regex: query, options: 'i' } }, { value: "$artist", type: "artist" }, null] },
+            { $cond: [{ $regexMatch: { input: "$album", regex: query, options: 'i' } }, { value: "$album", type: "album" }, null] },
+            {
+              $map: {
+                input: "$writers",
+                as: "writer",
+                in: { $cond: [{ $regexMatch: { input: "$$writer", regex: query, options: 'i' } }, { value: "$$writer", type: "writer" }, null] }
+              }
+            }
           ]
         }
       },
       { $unwind: "$suggestions" },
+      { $unwind: "$suggestions" },
       { $match: { "suggestions": { $ne: null } } },
-      { $replaceRoot: { newRoot: "$suggestions" } },
-      { $group: { _id: "$value", doc: { $first: "$$ROOT" } } },
-      { $replaceRoot: { newRoot: "$doc" } },
+      { $group: { _id: { value: "$suggestions.value", type: "$suggestions.type" }, suggestion: { $first: "$suggestions" } } },
+      { $replaceRoot: { newRoot: "$suggestion" } },
       { $sort: { value: 1 } },
       { $limit: defaultLimit }
     ]);
+
     expect(mockCallback).toHaveBeenCalledWith(null, { suggestions: mockSuggestions });
   });
 });

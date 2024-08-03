@@ -72,6 +72,11 @@ const searchService = {
   
       const aggregationPipeline = [
         { $match: searchQuery },
+        { $addFields: { 
+          relevance_score: query && query.trim() !== '' 
+            ? { $divide: [{ $sum: scoreQuery }, scoreQuery.length] }
+            : 1
+        }},
         { $sort: sortOption.year ? sortOption : { relevance_score: -1 } },
         { $skip: offset },
         { $limit: limit }
@@ -91,6 +96,7 @@ const searchService = {
         album: song.album,
         year: song.year,
         plays: song.plays,
+        relevance_score: song.relevance_score
       }));
   
       callback(null, { results: formattedResults, total_results: songs.length });
