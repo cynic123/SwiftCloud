@@ -31,7 +31,7 @@ router.get('/health', (req, res) => {
 	});
 });
 
-// Advanced Search (with detailed query, refer README.md for query specification details)
+// Advanced Search (with detailed query, refer API Specification doc for more details
 router.post('/advanced', (req, res) => {
 	const { query, filters, sort, limit = 10, offset = 0 } = req.body;
 	console.log(`Received request with query: ${query}, filters: ${filters}, sort: ${sort}, limit: ${limit}, offset: ${offset}`);

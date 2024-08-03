@@ -72,11 +72,6 @@ const searchService = {
   
       const aggregationPipeline = [
         { $match: searchQuery },
-        { $addFields: { 
-          relevance_score: query && query.trim() !== '' 
-            ? { $divide: [{ $sum: scoreQuery }, scoreQuery.length] }
-            : 1
-        }},
         { $sort: sortOption.year ? sortOption : { relevance_score: -1 } },
         { $skip: offset },
         { $limit: limit }
@@ -86,9 +81,7 @@ const searchService = {
   
       console.log(`Found ${songs.length} songs`);
   
-      const totalResults = await Song.countDocuments(searchQuery);
-  
-      console.log(`Total results: ${totalResults}`);
+      console.log(`Total results: ${songs.length}`);
   
       const formattedResults = songs.map(song => ({
         id: song._id.toString(),
@@ -98,10 +91,9 @@ const searchService = {
         album: song.album,
         year: song.year,
         plays: song.plays,
-        relevance_score: song.relevance_score
       }));
   
-      callback(null, { results: formattedResults, total_results: totalResults });
+      callback(null, { results: formattedResults, total_results: songs.length });
     } catch (err) {
       console.error('Advanced search error:', err);
       callback({
