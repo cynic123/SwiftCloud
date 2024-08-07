@@ -155,15 +155,43 @@ const popularityService = {
     console.log(`Received title query: "${title}"`);
 
     try {
-      // Find songs that match the title query
-      const matchingSongs = await Song.find({
-        title: { $regex: `^${title}`, $options: 'i' }
-      });
+      // Aggregation pipeline to find matching songs and compute play counts
+      const pipeline = [
+        {
+          $addFields: {
+            totalPlayCount: { $sum: '$plays.count' }
+          }
+        },
+        {
+          $setWindowFields: {
+            sortBy: { totalPlayCount: -1 },
+            output: {
+              rank: {
+                $rank: {}
+              }
+            }
+          }
+        },
+        {
+          $match: {
+            title: { $regex: `^${title}`, $options: 'i' }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            songId: '$_id',
+            title: '$title',
+            artist: '$artist',
+            play_count: '$totalPlayCount',
+            rank: 1
+          }
+        }
+      ];
 
-      console.log(`Found ${matchingSongs.length} songs matching the query`);
-      console.log('Matching songs:', matchingSongs.map(s => s.title));
+      const results = await Song.aggregate(pipeline);
 
-      if (matchingSongs.length === 0) {
+      if (results.length === 0) {
         console.log('No songs found, returning NOT_FOUND error');
         return callback({
           code: 404,
@@ -172,42 +200,8 @@ const popularityService = {
         });
       }
 
-      // Fetch all songs
-      const allSongs = await Song.find();
-
-      console.log(`Found ${allSongs.length} songs in total`);
-
-      // Aggregate play counts across all months for each song
-      const songPlayCounts = allSongs.map(song => {
-        const totalPlayCount = song.plays.reduce((sum, play) => sum + play.count, 0);
-        return {
-          songId: song._id.toString(),
-          title: song.title,
-          artist: song.artist,
-          totalPlayCount
-        };
-      });
-
-      // Sort songs by total play count and add rank
-      songPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
-      songPlayCounts.forEach((song, index) => {
-        song.rank = index + 1;
-      });
-
-      // Filter the song play counts to include only the matching songs
-      const filteredSongPlayCounts = songPlayCounts.filter(song =>
-        matchingSongs.some(ms => ms._id.toString() === song.songId)
-      );
-
-      // Ensure playCount is included in the response
       const response = {
-        rankings: filteredSongPlayCounts.map(song => ({
-          songId: song.songId,
-          title: song.title,
-          artist: song.artist,
-          play_count: song.totalPlayCount, // Ensure play_count is correctly set
-          rank: song.rank
-        }))
+        rankings: results
       };
 
       callback(null, response);
@@ -363,15 +357,42 @@ const popularityService = {
     console.log(`Received name query: "${name}"`);
 
     try {
-      // Find albums that match the name query
-      const matchingAlbums = await Album.find({
-        name: { $regex: `^${name}`, $options: 'i' }
-      });
+      // Aggregation pipeline to find matching albums and compute play counts
+      const pipeline = [
+        {
+          $addFields: {
+            totalPlayCount: { $sum: '$plays.count' }
+          }
+        },
+        {
+          $setWindowFields: {
+            sortBy: { totalPlayCount: -1 },
+            output: {
+              rank: {
+                $rank: {}
+              }
+            }
+          }
+        },
+        {
+          $match: {
+            name: { $regex: `^${name}`, $options: 'i' }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            name: '$name',
+            artist: '$artist',
+            play_count: '$totalPlayCount',
+            rank: 1
+          }
+        }
+      ];
 
-      console.log(`Found ${matchingAlbums.length} albums matching the query`);
-      console.log('Matching albums:', matchingAlbums.map(a => a.name));
+      const results = await Album.aggregate(pipeline);
 
-      if (matchingAlbums.length === 0) {
+      if (results.length === 0) {
         console.log('No albums found, returning NOT_FOUND error');
         return callback({
           code: 404,
@@ -380,39 +401,8 @@ const popularityService = {
         });
       }
 
-      // Fetch all albums
-      const allAlbums = await Album.find();
-
-      console.log(`Found ${allAlbums.length} albums in total`);
-
-      // Aggregate play counts across all months for each album
-      const albumPlayCounts = allAlbums.map(album => {
-        const totalPlayCount = album.plays.reduce((sum, play) => sum + play.count, 0);
-        return {
-          name: album.name,
-          artist: album.artist,
-          totalPlayCount
-        };
-      });
-
-      // Sort albums by total play count and add rank
-      albumPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
-      albumPlayCounts.forEach((album, index) => {
-        album.rank = index + 1;
-      });
-
-      // Filter the album play counts to include only the matching albums
-      const filteredAlbumPlayCounts = albumPlayCounts.filter(album =>
-        matchingAlbums.some(ma => ma.name === album.name)
-      );
-
       const response = {
-        rankings: filteredAlbumPlayCounts.map(album => ({
-          name: album.name,
-          artist: album.artist,
-          play_count: album.totalPlayCount,
-          rank: album.rank
-        }))
+        rankings: results
       };
 
       callback(null, response);
@@ -566,15 +556,47 @@ const popularityService = {
     console.log(`Received name query: "${name}"`);
 
     try {
-      // Find artists that match the name query
-      const matchingArtists = await Artist.find({
-        name: { $regex: name, $options: 'i' }  // Changed to match any occurrence of the name
-      });
+      // Aggregation pipeline to find matching artists and compute play counts
+      const pipeline = [
+        {
+          $addFields: {
+            totalPlayCount: {
+              $cond: {
+                if: { $isArray: "$plays" },
+                then: { $sum: "$plays.count" },
+                else: 0
+              }
+            }
+          }
+        },
+        {
+          $setWindowFields: {
+            sortBy: { totalPlayCount: -1 },
+            output: {
+              rank: {
+                $rank: {}
+              }
+            }
+          }
+        },
+        {
+          $match: {
+            name: { $regex: name, $options: 'i' }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            name: '$name',
+            play_count: '$totalPlayCount',
+            rank: 1
+          }
+        }
+      ];
 
-      console.log(`Found ${matchingArtists.length} artists matching the query`);
-      console.log('Matching artists:', matchingArtists.map(a => a._doc.name));
+      const results = await Artist.aggregate(pipeline);
 
-      if (matchingArtists.length === 0) {
+      if (results.length === 0) {
         console.log('No artists found, returning NOT_FOUND error');
         return callback({
           code: 404,
@@ -583,42 +605,13 @@ const popularityService = {
         });
       }
 
-      // Fetch all artists
-      const allArtists = await Artist.find();
-
-      console.log(`Found ${allArtists.length} artists in total`);
-
-      // Aggregate play counts across all months for each artist
-      const artistPlayCounts = allArtists.map(artist => {
-        const totalPlayCount = artist.plays ? artist.plays.reduce((sum, play) => sum + play._doc.count, 0) : 0;
-        return {
-          name: artist._doc.name,
-          totalPlayCount
-        };
-      });
-
-      // Sort artists by total play count and add rank
-      artistPlayCounts.sort((a, b) => b.totalPlayCount - a.totalPlayCount);
-      artistPlayCounts.forEach((artist, index) => {
-        artist.rank = index + 1;
-      });
-
-      // Filter the artist play counts to include only the matching artists
-      const filteredArtistPlayCounts = artistPlayCounts.filter(album =>
-        matchingArtists.some(ma => ma._doc.name === album.name)
-      );
-
       const response = {
-        rankings: filteredArtistPlayCounts.map(artist => ({
-          name: artist.name,
-          play_count: artist.totalPlayCount,
-          rank: artist.rank
-        }))
+        rankings: results
       };
 
       callback(null, response);
     } catch (error) {
-      console.error('Error in GetAlbumPopularity:', error);
+      console.error('Error in GetArtistPopularity:', error);
       callback({
         code: 500,
         message: 'Internal Server Error',
