@@ -110,13 +110,10 @@ const popularityService = {
           }
         },
         { $sort: { totalPlays: -1, title: 1 } },
-        { $skip: offset },
-        { $limit: limit },
         {
           $group: {
             _id: null,
             songs: { $push: '$$ROOT' },
-            maxPlayCount: { $max: '$totalPlays' }
           }
         },
         { $unwind: { path: '$songs', includeArrayIndex: 'index' } },
